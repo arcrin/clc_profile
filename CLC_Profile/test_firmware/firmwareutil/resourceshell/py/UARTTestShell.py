@@ -1,8 +1,7 @@
 from serial import SerialBase
-from test_jig_util.timing import Timeout
-from test_jig_util. timing import Timeout
-from .BaseTestShell import BaseTestShell
 import typing
+from test_jig_util.timing import Timeout
+from .BaseTestShell import BaseTestShell
 
 
 class UARTTestShell(BaseTestShell):
@@ -12,17 +11,13 @@ class UARTTestShell(BaseTestShell):
     def __init__(self, ser: SerialBase, max_command_length: int, max_response_length: int, checksum: bool = True,
                  debug: bool = False, exception_handler: typing.Optional[callable] = None, default_retries: int = 0):
         """
-
         :param ser:
-        :param max_command_length:
-        :param max_response_length:
-        :param checksum:
-        :param debut:
+        :param debug:
         :param exception_handler:
         :param default_retries:
         """
         self.ser = ser
-        super(UARTTestShell, self).__init__(max_command_length, max_response_length=max_response_length, checksum=checksum,
+        super(UARTTestShell, self).__init__(max_command_length=max_command_length, max_response_length=max_response_length, checksum=checksum,
                                             debug=debug, exception_handler=exception_handler, default_retries=default_retries)
         self._current_msg = b""
 
@@ -64,8 +59,9 @@ class UARTTestShell(BaseTestShell):
                 if promptPos + 2 != len(resp):
                     raise Exception(f"Query strict failure (response): {resp.decode(errors='replace')}")
 
-                resp = resp[len(command):promptPos].decode(errors='replace')
+                resp = resp[len(command):promptPos].decode(errors="replace")
                 return resp
+
         self.logger.error(f"Query fail (timeout): {resp.decode(errors='replace')}")
         raise Exception(f"Query failed (timeout): {resp.decode(errors='replace')}")
 
@@ -82,5 +78,3 @@ class UARTTestShell(BaseTestShell):
         msg = self._send_command(command)
         resp = self._receive_response(msg, timeout)
         return resp
-
-

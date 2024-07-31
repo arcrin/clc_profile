@@ -32,8 +32,10 @@ def program_flash(oocd: OpenOCD):
 current_directory = os.path.dirname(__file__)
 
 # Construct the path to the build folder
-test_firmware_path = os.path.join(os.path.dirname(__file__), "test_firmware\\clc_test_firmware.hex").replace("\\", "/")
-flash_firmware = os.path.join(os.path.dirname(__file__), "build\\RM_V1.1(Build3.66).hex").replace("\\", "/")
+test_firmware_path = os.path.join(os.path.dirname(__file__), "test_firmware\\CLC_STM32F103xB.hex").replace("\\", "/")
+# test_firmware_path = os.path.join(os.path.dirname(__file__), "test_firmware\\clc_test_firmware.hex").replace("\\", "/")
+flash_firmware = os.path.join(os.path.dirname(__file__), "build\\clc_led_toggle.hex").replace("\\", "/")
+# flash_firmware = os.path.join(os.path.dirname(__file__), "build\\RM_V1.1(Build3.66).hex").replace("\\", "/")
 
 print(test_firmware_path)
 
