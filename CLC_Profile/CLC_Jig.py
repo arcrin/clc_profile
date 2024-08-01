@@ -4,8 +4,8 @@ from pyDAQ.UniversalIO import UniversalIO, I2C, DAQ
 from pyDAQ.UART import DAQ_UART
 from pyDAQ.Sensors import TCS3472
 from pyDAQ.Expanders import PCA9535A_GPIO, TCA9546A_I2C
-from test_firmware.firmwareutil.resourceshell.py.GPIOResource import GPIOResource
-from test_firmware.firmwareutil.resourceshell.py.UARTTestShell import UARTTestShell
+from .test_firmware.firmwareutil.resourceshell.py.GPIOResource import GPIOResource
+from .test_firmware.firmwareutil.resourceshell.py.UARTTestShell import UARTTestShell
 from interface.OpenOCD.OpenOCD import OpenOCD
 from interface.wdi_simple import install_programmer_hub
 from enum import Enum
@@ -17,6 +17,7 @@ import os
 
 
 class CLC_Jig(TestJig, ABC):
+
     def __init__(self):
         install_programmer_hub()
         daq_ports = DAQ.FindDAQs()
@@ -28,8 +29,8 @@ class CLC_Jig(TestJig, ABC):
         self.daq1 = _a[1]
         self.daq2 = _a[2]
         top_pneumatic_control_expansion = self.daq2.EXP3
-        self.top_pneumatic_relay1_control = top_pneumatic_control_expansion.create_gpio1(mode="op", default=0)
-        self.top_pneumatic_relay2_control = top_pneumatic_control_expansion.create_gpio0(mode="op", default=0)
+        self.rms6_button_control = top_pneumatic_control_expansion.create_gpio1(mode="op", default=0)
+        self.gsm8_button_control = top_pneumatic_control_expansion.create_gpio0(mode="op", default=0)
 
         front_panel_i2c = I2C(self.daq2, 'EXP8', frequency=100000)
         self.front_panel = FrontPanel(front_panel_i2c)
@@ -40,11 +41,11 @@ class CLC_Jig(TestJig, ABC):
             on initialization of the test jig class
         """
         self._dut_uart = DAQ_UART(self.daq2, "EXP1", baudrate=115200, timeout=1)
-        # test_shell = UARTTestShell(test_shell_uart,
-        #                            max_command_length=512,
-        #                            max_response_length=2048,
-        #                            debug=True,
-        #                            default_retries=2)
+        self._test_shell = UARTTestShell(self._dut_uart,
+                                         max_command_length=512,
+                                         max_response_length=2048,
+                                         debug=True,
+                                         default_retries=2)
 
         """
             Voltage pogo pins are different based on the DUT
@@ -96,7 +97,7 @@ class CLC_Jig(TestJig, ABC):
             "GSM8_middle_top_connector": tp41
         }
 
-        self.rms_connector_probes = {
+        self.rms6_connector_probes = {
             "RMS_right_top_connector": tp38,
             "RMS_left_bottom_connector": tp37,
             "RMS_middle_top_connector": tp36,
@@ -122,7 +123,7 @@ class CLC_Jig(TestJig, ABC):
             "CAN": TCS3472(rms6_led_u1),
             "SYS": TCS3472(rms6_led_u2),
             "RLY1": TCS3472(rms6_led_u4),
-            "RLY2": TCS3472(rms6_led_u3),
+            # "RLY2": TCS3472(rms6_led_u3),
             "RLY3": TCS3472(rms6_led_u7),
             "RLY4": TCS3472(rms6_led_u8),
             "RLY5": TCS3472(rms6_led_u10),
@@ -146,6 +147,51 @@ class CLC_Jig(TestJig, ABC):
 
         }
 
+        kw = {"extra_args": ("-d-3",)}
+        self._oocd = None
+
+        """
+            Buttons
+        """
+        self.rms6_push_button_resources = {
+            "push_button_sw311": GPIOResource(self.test_shell, "SW311_PB"),
+            "push_button_sw301": GPIOResource(self.test_shell, "SW301_PB"),
+            "push_button_sw312": GPIOResource(self.test_shell, "SW312_PB"),
+            "push_button_sw302": GPIOResource(self.test_shell, "SW302_PB"),
+            "push_button_sw313": GPIOResource(self.test_shell, "SW313_PB"),
+            "push_button_sw303": GPIOResource(self.test_shell, "SW303_PB"),
+        }
+
+        """
+            Relay
+        """
+        wiring_board_gpio_expander_i2c = I2C(self.daq2, "EXP5", frequency=100000)
+        self.rms6_relay_control = {
+            "relay1_off": (GPIOResource(self.test_shell, "RLYA_OFF1"),PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 0)),
+            "relay1_on": (GPIOResource(self.test_shell, "RLYA_ON1"),PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 1)),
+            "relay2_off": (GPIOResource(self.test_shell, "RLYB_OFF1"),PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 2)),
+            "relay2_on": (GPIOResource(self.test_shell, "RLYB_ON1"),PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 3)),
+            "relay3_off": (GPIOResource(self.test_shell, "RLYA_OFF2"),PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 4)),
+            "relay3_on": (GPIOResource(self.test_shell, "RLYA_ON2"),PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 5)),
+            "relay4_off": (GPIOResource(self.test_shell, "RLYB_OFF2"),PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 6)),
+            "relay4_on": (GPIOResource(self.test_shell, "RLYB_ON2"),PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 7)),
+            "relay5_off": (GPIOResource(self.test_shell, "RLYA_OFF3"),PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 8)),
+            "relay5_on": (GPIOResource(self.test_shell, "RLYA_ON3"),PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 9)),
+            "relay6_off": (GPIOResource(self.test_shell, "RLYB_OFF3"),PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 10)),
+            "relay6_on": (GPIOResource(self.test_shell, "RLYB_ON3"),PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 11)),
+        }
+
+    @property
+    def test_shell(self):
+        return self._test_shell
+
+    @property
+    def oocd(self):
+        return self._oocd
+
+    @oocd.setter
+    def oocd(self, value: OpenOCD):
+        self._oocd = value
 
     def dut_setup(self, dut, **kwargs):
         pass
@@ -154,7 +200,7 @@ class CLC_Jig(TestJig, ABC):
         pass
 
     def get_front_panel_options(self) -> typing.Tuple['BaseI2C', int]:
-        pass
+        return self.front_panel._i2c, 0
 
     def dut_power_on(self):
         self.daq2["VOUT_enable"].value = 1
@@ -162,13 +208,13 @@ class CLC_Jig(TestJig, ABC):
     def dut_power_off(self):
         self.daq2["VOUT_enable"].value = 0
 
-    def dut_power(self, delay: int=0.1):
+    def dut_power_cycle(self, delay: int=0.1):
         self.dut_power_off()
         sleep(delay)
         self.dut_power_on()
 
-    def rms_button_press_on(self):
-        self.top_pneumatic_relay2_control.value = 1
+    def rms6_button_press(self):
+        self.rms6_button_control.value = 1
 
-    def rms_button_press_off(self):
-        self.top_pneumatic_relay2_control.value = 0
+    def rms6_button_release(self):
+        self.rms6_button_control.value = 0

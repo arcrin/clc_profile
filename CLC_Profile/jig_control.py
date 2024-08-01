@@ -37,7 +37,8 @@ oocd = OpenOCD("stm32f1x_no_working_area.cfg",
                log_level=logging.DEBUG,
                ft12=False,
                kill_existing=True,
-               **kw)
+               # **kw
+               )
 
 
 TP40 = PCA9535A_GPIO(top_board_i2c, 0x27, 0, inverted_logic=True)
@@ -116,7 +117,7 @@ rms6_leds = {
     "CAN": TCS3472(rms6_led_u1),
     "SYS": TCS3472(rms6_led_u2),
     "RLY1": TCS3472(rms6_led_u4),
-    "RLY2": TCS3472(rms6_led_u3),
+    # "RLY2": TCS3472(rms6_led_u3),
     "RLY3": TCS3472(rms6_led_u7),
     "RLY4": TCS3472(rms6_led_u8),
     "RLY5": TCS3472(rms6_led_u10),
@@ -292,10 +293,10 @@ sleep(0.1)
 front_panel.engage_mounting_plate()
 sleep(2)
 dut_power_on()
-# sleep(0.5)
-# start_oocd()
-# sleep(0.2)
-# load_test_shell()
-# sleep(0.2)
+sleep(0.5)
+start_oocd()
+sleep(0.2)
+load_test_shell()
+sleep(0.2)
 
 
