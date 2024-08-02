@@ -40,7 +40,7 @@ class CLC_Jig(TestJig, ABC):
             product is loaded. However, the UART instance is created 
             on initialization of the test jig class
         """
-        self._dut_uart = DAQ_UART(self.daq2, "EXP1", baudrate=115200, timeout=1)
+        self._dut_uart = DAQ_UART(self.daq2, "EXP1", baudrate=115200, timeout=2)
         self._test_shell = UARTTestShell(self._dut_uart,
                                          max_command_length=512,
                                          max_response_length=2048,
@@ -108,8 +108,9 @@ class CLC_Jig(TestJig, ABC):
         }
 
         """
-            LED sensors
+            LED 
         """
+        # Sensors
         rms6_led_u1 = TCA9546A_I2C(top_board_i2c, 0x74, 0)
         rms6_led_u2 = TCA9546A_I2C(top_board_i2c, 0x74, 1)
         rms6_led_u3 = TCA9546A_I2C(top_board_i2c, 0x74, 2)
@@ -119,7 +120,7 @@ class CLC_Jig(TestJig, ABC):
         rms6_led_u10 = TCA9546A_I2C(top_board_i2c, 0x75, 2)
         rms6_led_u11 = TCA9546A_I2C(top_board_i2c, 0x75, 3)
 
-        self.rms6_leds = {
+        self.rms6_led_sensor = {
             "CAN": TCS3472(rms6_led_u1),
             "SYS": TCS3472(rms6_led_u2),
             "RLY1": TCS3472(rms6_led_u4),
@@ -128,6 +129,10 @@ class CLC_Jig(TestJig, ABC):
             "RLY4": TCS3472(rms6_led_u8),
             "RLY5": TCS3472(rms6_led_u10),
             "RLY6": TCS3472(rms6_led_u11)
+        }
+
+        self.rms6_led_control = {
+
         }
 
         gsm8_led_u12 = TCA9546A_I2C(top_board_i2c, 0x76, 0)
@@ -149,6 +154,19 @@ class CLC_Jig(TestJig, ABC):
 
         kw = {"extra_args": ("-d-3",)}
         self._oocd = None
+
+        # Test firmware resources
+        self.led_green = GPIOResource(self.test_shell, "LED_GREEN")
+        self.led_red = GPIOResource(self.test_shell, "LED_RED")
+
+        self.rms6_led_test_firmware_resources = {
+            "SW311": GPIOResource(self.test_shell, "LED_SW311"),
+            "SW301": GPIOResource(self.test_shell, "LED_SW301"),
+            "SW312": GPIOResource(self.test_shell, "LED_SW312"),
+            "SW302": GPIOResource(self.test_shell, "LED_SW302"),
+            "SW313": GPIOResource(self.test_shell, "LED_SW313"),
+            "SW303": GPIOResource(self.test_shell, "LED_SW303"),
+        }
 
         """
             Buttons
@@ -180,6 +198,21 @@ class CLC_Jig(TestJig, ABC):
             "relay6_off": (GPIOResource(self.test_shell, "RLYB_OFF3"),PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 10)),
             "relay6_on": (GPIOResource(self.test_shell, "RLYB_ON3"),PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 11)),
         }
+
+        """
+            Address
+        """
+        self.rms6_address_test_firmware_resources = {
+            "address_pin_01": GPIOResource(self.test_shell, "ADDR_01"),
+            "address_pin_02": GPIOResource(self.test_shell, "ADDR_02"),
+            "address_pin_04": GPIOResource(self.test_shell, "ADDR_04"),
+            "address_pin_08": GPIOResource(self.test_shell, "ADDR_08"),
+            "address_pin_11": GPIOResource(self.test_shell, "ADDR_11"),
+            "address_pin_12": GPIOResource(self.test_shell, "ADDR_12"),
+            "address_pin_14": GPIOResource(self.test_shell, "ADDR_14"),
+            "address_pin_18": GPIOResource(self.test_shell, "ADDR_18"),
+        }
+
 
     @property
     def test_shell(self):

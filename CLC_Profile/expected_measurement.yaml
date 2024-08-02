@@ -8,3 +8,13 @@ Rails:
   SW4_PWR: [18, 23]
   SW5_PWR: [18, 23]
   SW6_PWR: [18, 23]
+
+Address:
+  address_pin_01: true
+  address_pin_02: true
+  address_pin_04: true
+  address_pin_08: true
+  address_pin_11: true
+  address_pin_12: true
+  address_pin_14: true
+  address_pin_18: true

@@ -20,7 +20,7 @@ class GPIOResource(BaseGPIO):
         return self._peripheral_name
 
     def configure(self):
-        self._shell.query(f"GPIOResource CONF {self._name}")
+        self._shell.query(f"GPIOResource CONF {self._name}", )
 
     @property
     def value(self) -> bool:

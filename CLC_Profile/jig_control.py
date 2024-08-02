@@ -97,12 +97,12 @@ test_shell = UARTTestShell(test_shell_uart,
 
 led_green = GPIOResource(test_shell, "LED_GREEN")
 led_red = GPIOResource(test_shell, "LED_RED")
-led_rly1 = GPIOResource(test_shell, "SW311_LED")
-led_rly2 = GPIOResource(test_shell, "SW301_LED")
-led_rly3 = GPIOResource(test_shell, "SW312_LED")
-led_rly4 = GPIOResource(test_shell, "SW302_LED")
-led_rly5 = GPIOResource(test_shell, "SW313_LED")
-led_rly6 = GPIOResource(test_shell, "SW303_LED")
+led_rly1 = GPIOResource(test_shell, "LED_SW311")
+led_rly2 = GPIOResource(test_shell, "LED_SW301")
+led_rly3 = GPIOResource(test_shell, "LED_SW312")
+led_rly4 = GPIOResource(test_shell, "LED_SW302")
+led_rly5 = GPIOResource(test_shell, "LED_SW313")
+led_rly6 = GPIOResource(test_shell, "LED_SW303")
 
 rms6_led_u1 = TCA9546A_I2C(top_board_i2c, 0x74, 0)
 rms6_led_u2 = TCA9546A_I2C(top_board_i2c, 0x74, 1)
@@ -202,6 +202,26 @@ rms6_relay_control ={
     "relay6_on_test_firmware_resource": GPIOResource(test_shell, "RLYB_ON3"),
 }
 
+address_pin_1 = GPIOResource(test_shell, "ADDR_01")
+address_pin_2 = GPIOResource(test_shell, "ADDR_02")
+address_pin_4 = GPIOResource(test_shell, "ADDR_04")
+address_pin_8 = GPIOResource(test_shell, "ADDR_08")
+address_pin_11 = GPIOResource(test_shell, "ADDR_11")
+address_pin_12 = GPIOResource(test_shell, "ADDR_12")
+address_pin_14 = GPIOResource(test_shell, "ADDR_14")
+address_pin_18 = GPIOResource(test_shell, "ADDR_18")
+
+rms6_address_reading = {
+    "address_pin_1": address_pin_1,
+    "address_pin_2": address_pin_2,
+    "address_pin_3": address_pin_4,
+    "address_pin_4": address_pin_8,
+    "address_pin_5": address_pin_11,
+    "address_pin_6": address_pin_12,
+    "address_pin_7": address_pin_14,
+    "address_pin_8": address_pin_18,
+}
+
 
 def dut_power_on():
     daq2['VOUT_enable'].value = 1
@@ -287,16 +307,20 @@ def rms6_relay_control_sim():
         sleep(0.1)
         print(f"{test_point_name}: {test_point.value}\n")
 
+def address_reading():
+    for resource_name, resource in rms6_address_reading.items():
+        print(f"{resource_name}: {resource.value}")
+
 
 
 sleep(0.1)
 front_panel.engage_mounting_plate()
 sleep(2)
 dut_power_on()
-sleep(0.5)
-start_oocd()
-sleep(0.2)
-load_test_shell()
-sleep(0.2)
+# sleep(0.5)
+# start_oocd()
+# sleep(0.2)
+# load_test_shell()
+# sleep(0.2)
 
 

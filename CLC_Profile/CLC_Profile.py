@@ -62,6 +62,7 @@ class CLC_Profile(Profile):
         super(CLC_Profile, self).__init__(dut)
         self.dut = dut
         CLC_Profile.jig = jig
+        CLC_Profile.Profile_Info['daq'] = jig.daq1
         self.test_case_scheduler = TCScheduler(self, log_level=logging.DEBUG)
 
         self.clean_up_script = TestCase("CleanUp",
@@ -96,6 +97,7 @@ class CLC_Profile(Profile):
                       )
 
         self.add_test("Load Test Shell",
+                      prerequisites=["Start OpenOCD", "Start Threads", "Voltage Rails Measurement"],
                       description="Load the test shell",
                       verify_function=lambda x: x,
                       function=self.load_test_shell
@@ -112,6 +114,7 @@ class CLC_Profile(Profile):
                       )
 
         self.add_test("Button Press Check",
+                      prerequisites=["Load Test Shell"],
                       description="Check if buttons are pressed",
                       verify_function=lambda x: x,
                       # function=self.button_press_check,
@@ -120,6 +123,7 @@ class CLC_Profile(Profile):
                       )
 
         self.add_test("Relay Control",
+                      prerequisites=["Load Test Shell"],
                       description="Control the relays",
                       verify_function=lambda x: x,
                       # function=self.relay_control,
@@ -127,7 +131,15 @@ class CLC_Profile(Profile):
                       function=self.test_case_scheduler.TestCaseWaiter
                       )
 
+        self.add_test("Address",
+                      prerequisites=["Load Test Shell"],
+                      description="Check the address",
+                      verify_function=lambda x: x,
+                      real_function=self.read_address,
+                      function=self.test_case_scheduler.TestCaseWaiter)
+
         self.add_test("Program Flash",
+                      prerequisites=["Load Test Shell"],
                       description="Program the flash",
                       verify_function=lambda x: x,
                       # function=self.program_flash,
@@ -259,6 +271,7 @@ class CLC_Profile(Profile):
 
         self.jig.oocd.memprog_init(0x20004C00)
 
+        sleep(1)
         LOAD_TEST_SHELL_EVENT.set()
         return result
 
@@ -299,7 +312,6 @@ class CLC_Profile(Profile):
         LOAD_TEST_SHELL_EVENT.wait()
         result = TestResult()
         for relay_control_label, (test_firmware_resource, uio_reading) in self.jig.rms6_relay_control.items():
-            sleep(1)
             print(f"{relay_control_label} CLEAR")
             test_firmware_resource.value = 0
             result += TestResult(
@@ -327,6 +339,7 @@ class CLC_Profile(Profile):
         LOAD_TEST_SHELL_EVENT.wait()
         try:
             flash_firmware = os.path.join(os.path.dirname(__file__), "build\\RM_V1.1(Build3.66).hex").replace("\\", "/")
+            # flash_firmware = os.path.join(os.path.dirname(__file__), "build\\clc_led_toggle.hex").replace("\\", "/")
 
             self.jig.oocd.memprog_submit(0, 0, 60)
             self.jig.oocd.memprog_wait_command(0)
@@ -337,6 +350,22 @@ class CLC_Profile(Profile):
             return result
         except:
             raise
+
+
+    def read_address(self):
+        LOAD_TEST_SHELL_EVENT.wait()
+        self.jig.led_red.value = 0
+        self.jig.led_green.value = 0
+        result = TestResult()
+        for address_pin_label, address_pin_resource in self.jig.rms6_address_test_firmware_resources.items():
+            address_pin_resource.configure()
+            result += TestResult(address_pin_resource.value == self.expected_measurement["Address"][address_pin_label],
+                                 address_pin_label,
+                                 f"{address_pin_label} {'on' if self.expected_measurement['Address'][address_pin_label] else 'off'}",
+                                 f"{address_pin_label} {'on' if address_pin_resource.value else 'off'}",
+                                 "")
+        return result
+
     def test_suit_clean_up(self):
         self.stop_oocd()
         try:
