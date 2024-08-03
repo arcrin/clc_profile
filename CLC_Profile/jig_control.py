@@ -5,6 +5,7 @@ from pyDAQ.UART import DAQ_UART
 from pyDAQ.Sensors import TCS3472
 from pyDAQ.Expanders import PCA9535A_GPIO, TCA9546A_I2C
 from test_firmware.firmwareutil.resourceshell.py.GPIOResource import GPIOResource
+from test_firmware.firmwareutil.resourceshell.py.ADCResource import ADCResource
 from test_firmware.firmwareutil.resourceshell.py.UARTTestShell import UARTTestShell
 from interface.OpenOCD.OpenOCD import OpenOCD
 from enum import Enum
@@ -169,21 +170,21 @@ rms6_voltage_rails = {
 """
     Relay on/off 
 """
-wiring_board_gpio_expander_i2c = I2C(daq2, "EXP5", frequency=100000)
+wiring_board_gpio_expander_0x20_i2c = I2C(daq2, "EXP5", frequency=100000)
 
 rms6_relay_control_feedback_readings = {
-    "relay1_off_reading": PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 0),
-    "relay1_on_reading": PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 1),
-    "relay2_off_reading": PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 2),
-    "relay2_on_reading": PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 3),
-    "relay3_off_reading": PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 4),
-    "relay3_on_reading": PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 5),
-    "relay4_off_reading": PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 6),
-    "relay4_on_reading": PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 7),
-    "relay5_off_reading": PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 8),
-    "relay5_on_reading": PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 9),
-    "relay6_off_reading": PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 10),
-    "relay6_on_reading": PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x20, 11),
+    "relay1_off_reading": PCA9535A_GPIO(wiring_board_gpio_expander_0x20_i2c, 0x20, 0),
+    "relay1_on_reading": PCA9535A_GPIO(wiring_board_gpio_expander_0x20_i2c, 0x20, 1),
+    "relay2_off_reading": PCA9535A_GPIO(wiring_board_gpio_expander_0x20_i2c, 0x20, 2),
+    "relay2_on_reading": PCA9535A_GPIO(wiring_board_gpio_expander_0x20_i2c, 0x20, 3),
+    "relay3_off_reading": PCA9535A_GPIO(wiring_board_gpio_expander_0x20_i2c, 0x20, 4),
+    "relay3_on_reading": PCA9535A_GPIO(wiring_board_gpio_expander_0x20_i2c, 0x20, 5),
+    "relay4_off_reading": PCA9535A_GPIO(wiring_board_gpio_expander_0x20_i2c, 0x20, 6),
+    "relay4_on_reading": PCA9535A_GPIO(wiring_board_gpio_expander_0x20_i2c, 0x20, 7),
+    "relay5_off_reading": PCA9535A_GPIO(wiring_board_gpio_expander_0x20_i2c, 0x20, 8),
+    "relay5_on_reading": PCA9535A_GPIO(wiring_board_gpio_expander_0x20_i2c, 0x20, 9),
+    "relay6_off_reading": PCA9535A_GPIO(wiring_board_gpio_expander_0x20_i2c, 0x20, 10),
+    "relay6_on_reading": PCA9535A_GPIO(wiring_board_gpio_expander_0x20_i2c, 0x20, 11),
 }
 
 
@@ -222,6 +223,57 @@ rms6_address_reading = {
     "address_pin_8": address_pin_18,
 }
 
+relay_a_feedback_1 = ADCResource(test_shell, "RLYA_FB1")
+relay_b_feedback_1 = ADCResource(test_shell, "RLYB_FB1")
+relay_a_feedback_2 = ADCResource(test_shell, "RLYA_FB2")
+relay_b_feedback_2 = ADCResource(test_shell, "RLYB_FB2")
+relay_a_feedback_3 = ADCResource(test_shell, "RLYA_FB3")
+relay_b_feedback_3 = ADCResource(test_shell, "RLYB_FB3")
+
+relay_feedback = {
+    "relay_a_feedback_1": relay_a_feedback_1,
+    "relay_b_feedback_1": relay_b_feedback_1,
+    "relay_a_feedback_2": relay_a_feedback_2,
+    "relay_b_feedback_2": relay_b_feedback_2,
+    "relay_a_feedback_3": relay_a_feedback_3,
+    "relay_b_feedback_3": relay_b_feedback_3
+}
+
+"""
+    Switch
+"""
+
+rms6_switch_on_control = PCA9535A_GPIO(wiring_board_gpio_expander_0x20_i2c, 0x20, 12, mode="op")
+rms6_switch_off_control = PCA9535A_GPIO(wiring_board_gpio_expander_0x20_i2c, 0x20, 13, mode="op")
+
+swa_on1 = GPIOResource(test_shell, "SWA_ON1")
+swa_off1 = GPIOResource(test_shell, "SWA_OFF1")
+swb_on1 = GPIOResource(test_shell, "SWB_ON1")
+swb_off1 = GPIOResource(test_shell, "SWB_OFF1")
+swa_on2 = GPIOResource(test_shell, "SWA_ON2")
+swa_off2 = GPIOResource(test_shell, "SWA_OFF2")
+swb_on2 = GPIOResource(test_shell, "SWB_ON2")
+swb_off2 = GPIOResource(test_shell, "SWB_OFF2")
+swa_on3 = GPIOResource(test_shell, "SWA_ON3")
+swa_off3 = GPIOResource(test_shell, "SWA_OFF3")
+swb_on3 = GPIOResource(test_shell, "SWB_ON3")
+swb_off3 = GPIOResource(test_shell, "SWB_OFF3")
+
+
+rms6_switch_control_readings = {
+    "swa_on1" : swa_on1,
+    "swa_off1" : swa_off1,
+    "swb_on1" : swb_on1,
+    "swb_off1" : swb_off1,
+    "swa_on2" : swa_on2,
+    "swa_off2" : swa_off2,
+    "swb_on2" : swb_on2,
+    "swb_off2" : swb_off2,
+    "swa_on3" : swa_on3,
+    "swa_off3" : swa_off3,
+    "swb_on3" : swb_on3,
+    "swb_off3" : swb_off3,
+}
 
 def dut_power_on():
     daq2['VOUT_enable'].value = 1
@@ -309,6 +361,15 @@ def rms6_relay_control_sim():
 
 def address_reading():
     for resource_name, resource in rms6_address_reading.items():
+        print(f"{resource_name}: {resource.value}")
+
+def relay_feedback_reading():
+    for resource_name, resource in relay_feedback.items():
+        print(f"{resource_name}: {resource.value}")
+
+
+def switch_control_reading():
+    for resource_name, resource in rms6_switch_control_readings.items():
         print(f"{resource_name}: {resource.value}")
 
 

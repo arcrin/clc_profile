@@ -5,6 +5,7 @@ from pyDAQ.UART import DAQ_UART
 from pyDAQ.Sensors import TCS3472
 from pyDAQ.Expanders import PCA9535A_GPIO, TCA9546A_I2C
 from .test_firmware.firmwareutil.resourceshell.py.GPIOResource import GPIOResource
+from .test_firmware.firmwareutil.resourceshell.py.ADCResource import ADCResource
 from .test_firmware.firmwareutil.resourceshell.py.UARTTestShell import UARTTestShell
 from interface.OpenOCD.OpenOCD import OpenOCD
 from interface.wdi_simple import install_programmer_hub
@@ -200,6 +201,15 @@ class CLC_Jig(TestJig, ABC):
         }
 
         """
+            Switch
+        """
+        self.rms6_switch_on_control = PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x23, 12, mode="op")
+        self.rms6_switch_off_control = PCA9535A_GPIO(wiring_board_gpio_expander_i2c, 0x23, 12, mode="op")
+
+
+
+
+        """
             Address
         """
         self.rms6_address_test_firmware_resources = {
@@ -211,6 +221,19 @@ class CLC_Jig(TestJig, ABC):
             "address_pin_12": GPIOResource(self.test_shell, "ADDR_12"),
             "address_pin_14": GPIOResource(self.test_shell, "ADDR_14"),
             "address_pin_18": GPIOResource(self.test_shell, "ADDR_18"),
+        }
+
+
+        """
+            Relay feedback
+        """
+        self.rms6_relay_feedback = {
+            "relay_a_feedback_1": ADCResource(self.test_shell, "RLYA_FB1"),
+            "relay_b_feedback_1": ADCResource(self.test_shell, "RLYB_FB1"),
+            "relay_a_feedback_2": ADCResource(self.test_shell, "RLYA_FB2"),
+            "relay_b_feedback_2": ADCResource(self.test_shell, "RLYB_FB2"),
+            "relay_a_feedback_3": ADCResource(self.test_shell, "RLYA_FB3"),
+            "relay_b_feedback_3": ADCResource(self.test_shell, "RLYB_FB3"),
         }
 
 

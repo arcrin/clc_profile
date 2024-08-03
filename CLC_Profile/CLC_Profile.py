@@ -11,11 +11,13 @@ from interface.jflash import GetModuleInfo
 from interface.OpenOCD.OpenOCD import OpenOCD
 from test_jig_util.trace import format_exc_plus
 from test_jig_util.TCScheduler import TCScheduler
+from pyDAQ.DAQ import DAQ
 import threading
 import logging
 import yaml
 import os
 import sys
+import serial
 
 OOCD_DEBUG = True
 
@@ -138,6 +140,13 @@ class CLC_Profile(Profile):
                       real_function=self.read_address,
                       function=self.test_case_scheduler.TestCaseWaiter)
 
+        self.add_test("Relay Feedback",
+                      prerequisites=["Load Test Shell"],
+                      description="Check the relay feedback",
+                      verify_function=lambda x: x,
+                      real_function=self.relay_feedback,
+                      function=self.test_case_scheduler.TestCaseWaiter)
+
         self.add_test("Program Flash",
                       prerequisites=["Load Test Shell"],
                       description="Program the flash",
@@ -151,6 +160,7 @@ class CLC_Profile(Profile):
 
     @classmethod
     def profile_clean_up(cls):
+        # TODO: need to find a way to clean up when reloading the profile without initializing a profile instance
         if cls.jig.oocd is not None:
             try:
                 cls.jig.oocd.__exit__(*sys.exc_info())
@@ -163,6 +173,7 @@ class CLC_Profile(Profile):
 
         cls.jig.daq1.close()
         cls.jig.daq2.close()
+
 
 
     def startup(self):
@@ -271,7 +282,6 @@ class CLC_Profile(Profile):
 
         self.jig.oocd.memprog_init(0x20004C00)
 
-        sleep(1)
         LOAD_TEST_SHELL_EVENT.set()
         return result
 
@@ -364,6 +374,16 @@ class CLC_Profile(Profile):
                                  f"{address_pin_label} {'on' if self.expected_measurement['Address'][address_pin_label] else 'off'}",
                                  f"{address_pin_label} {'on' if address_pin_resource.value else 'off'}",
                                  "")
+        return result
+
+
+    def relay_feedback(self):
+        LOAD_TEST_SHELL_EVENT.wait()
+        result = TestResult()
+        for relay_feedback_label, relay_feedback_resource in self.jig.rms6_relay_feedback.items():
+            result += in_range_list(relay_feedback_resource.value, [2.0, 3.0], relay_feedback_label)
+            if result.is_fail():
+                break
         return result
 
     def test_suit_clean_up(self):
