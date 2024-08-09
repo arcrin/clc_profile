@@ -1,20 +1,31 @@
 Rails:
-  3V3: [3.2, 3.4]
-  5V0: [4.6, 5.4]
-  PWR_OUT: [23, 25.5]
-  SW1_PWR: [18, 23]
-  SW2_PWR: [18, 23]
-  SW3_PWR: [18, 23]
-  SW4_PWR: [18, 23]
-  SW5_PWR: [18, 23]
-  SW6_PWR: [18, 23]
+  RMS6:
+    3V3: [3.2, 3.4]
+    5V0: [4.6, 5.4]
+    PWR_OUT: [23, 25.5]
+    SW1_PWR: [16, 23]
+    SW2_PWR: [16, 23]
+    SW3_PWR: [16, 23]
+    SW4_PWR: [16, 23]
+    SW5_PWR: [16, 23]
+    SW6_PWR: [16, 23]
+  GSM8:
+    3V3: [ 3.2, 3.4 ]
+    5V0: [ 4.6, 5.4 ]
+    PWR_OUT: [ 0.0, 0.5 ]
+    NET_PWR_OUT: [ 28.0, 34.0]
+
+Jumper:
+  GSM8: [13,18]
+  RMS6: [16, 23]
+
 
 Address:
-  address_pin_01: true
-  address_pin_02: true
-  address_pin_04: true
-  address_pin_08: true
-  address_pin_11: true
-  address_pin_12: true
-  address_pin_14: true
-  address_pin_18: true
+  address_pin_1: false
+  address_pin_2: true
+  address_pin_3: true
+  address_pin_4: true
+  address_pin_5: false
+  address_pin_6: true
+  address_pin_7: true
+  address_pin_8: true

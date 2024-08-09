@@ -17,3 +17,6 @@ class ADCResource:
         adc_value = int(resp)
         value = 3.3 / 4096 * adc_value
         return value
+
+    def configure(self):
+        self._shell.query(f"ADCResource CONF {self._name}")

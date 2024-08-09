@@ -2,6 +2,10 @@ import time
 
 from framework.components.profile import Profile
 from .CLC_Jig import CLC_Jig
+from .test_firmware.firmwareutil.resourceshell.py.CANResource import CANFrame
+from .Common_Test_Cases import CommonTestCases
+from .RMS6_Test_Cases import RMS6TestCases
+from .GSM8_Test_Cases import GSM8TestCases
 from framework.components.test_case import TestCase
 from test_jig_util.TestResult import TestResult
 from time import sleep
@@ -50,13 +54,13 @@ class CLC_Profile(Profile):
     supported_product_numbers = {
         CLCRMS6_PN: {'full_sn': True},
         CLCRM6_PN: {'full_sn': True},
-        CLCGSM8_PN: {'full_sn': True},
+        CLCGSM8_PN: {'full_sn': True, "skip": [351011]},
         CLCDIM4_PN: {'full_sn': True}
     }
 
     jig: CLC_Jig = None
 
-    FIRMWARE = '123456'
+    FIRMWARE = None
     cwd = os.path.dirname(os.path.abspath(__file__))
     expected_measurement = ordered_load(open(cwd + r'\expected_measurement.yaml', 'r'), yaml.SafeLoader)
 
@@ -72,90 +76,13 @@ class CLC_Profile(Profile):
                                         verify_function=lambda x: x,
                                         function=self.test_suit_clean_up)
 
-        self.add_test("Startup",
-                      description="Set up the test environment, such as turning on the product",
-                      verify_function=lambda x: x,
-                      function=self.startup
-                      )
-
-        self.add_test("Start Threads",
-                        description="Start thread scheduler",
-                        verify_function=lambda x: x,
-                        function=self.start_test_case_scheduler
-                      )
-
-        self.add_test("Voltage Rails Measurement",
-                      description="Measure the voltage rails",
-                      verify_function=lambda x: x,
-                      # function=self.voltage_rails_measurement,
-                      real_function=self.voltage_rails_measurement,
-                      function=self.test_case_scheduler.TestCaseWaiter,
-                      )
-
-        self.add_test("Start OpenOCD",
-                      description="Start OpenOCD",
-                      verify_function=lambda x: x,
-                      function=self.start_oocd
-                      )
-
-        self.add_test("Load Test Shell",
-                      prerequisites=["Start OpenOCD", "Start Threads", "Voltage Rails Measurement"],
-                      description="Load the test shell",
-                      verify_function=lambda x: x,
-                      function=self.load_test_shell
-                      )
-
-
-
-        self.add_test("Connector Detection",
-                      description="Detect the connectors",
-                      verify_function=lambda x: x,
-                      # function=self.connector_detection,
-                      real_function=self.connector_detection,
-                      function=self.test_case_scheduler.TestCaseWaiter,
-                      )
-
-        self.add_test("Button Press Check",
-                      prerequisites=["Load Test Shell"],
-                      description="Check if buttons are pressed",
-                      verify_function=lambda x: x,
-                      # function=self.button_press_check,
-                      real_function=self.button_press_check,
-                      function=self.test_case_scheduler.TestCaseWaiter
-                      )
-
-        self.add_test("Relay Control",
-                      prerequisites=["Load Test Shell"],
-                      description="Control the relays",
-                      verify_function=lambda x: x,
-                      # function=self.relay_control,
-                      real_function=self.relay_control,
-                      function=self.test_case_scheduler.TestCaseWaiter
-                      )
-
-        self.add_test("Address",
-                      prerequisites=["Load Test Shell"],
-                      description="Check the address",
-                      verify_function=lambda x: x,
-                      real_function=self.read_address,
-                      function=self.test_case_scheduler.TestCaseWaiter)
-
-        self.add_test("Relay Feedback",
-                      prerequisites=["Load Test Shell"],
-                      description="Check the relay feedback",
-                      verify_function=lambda x: x,
-                      real_function=self.relay_feedback,
-                      function=self.test_case_scheduler.TestCaseWaiter)
-
-        self.add_test("Program Flash",
-                      prerequisites=["Load Test Shell"],
-                      description="Program the flash",
-                      verify_function=lambda x: x,
-                      # function=self.program_flash,
-                      real_function=self.program_flash,
-                      function=self.test_case_scheduler.TestCaseWaiter
-                      )
-
+        CommonTestCases(self)
+        if self.dut.ProductNumber == CLC_Profile.CLCRMS6_PN:
+            RMS6TestCases(self)
+            CLC_Profile.FIRMWARE = "RM_V1.1(Build3.66)"
+        elif self.dut.ProductNumber == CLC_Profile.CLCGSM8_PN:
+            GSM8TestCases(self)
+            CLC_Profile.FIRMWARE = "GS_V1.1(Build3.98)"
 
 
     @classmethod
@@ -186,11 +113,23 @@ class CLC_Profile(Profile):
         self.test_case_scheduler.Start()
         return True
 
-    def voltage_rails_measurement(self):
+    def preliminary_voltage_rails(self, *args, **kwargs):
+        if 'voltage_rails' not in kwargs:
+            return TestResult(False, "Preliminary Voltage Rails", "", "", "No voltage rails to measure")
         result = TestResult()
-        expected_ranges = CLC_Profile.expected_measurement['Rails']
-        for rail_name, test_point in self.jig.rms6_voltage_rails.items():
+        if self.dut.ProductNumber == CLC_Profile.CLCRMS6_PN:
+            expected_ranges = CLC_Profile.expected_measurement['Rails']['RMS6']
+        elif self.dut.ProductNumber == CLC_Profile.CLCGSM8_PN:
+            expected_ranges = CLC_Profile.expected_measurement['Rails']['GSM8']
+        for rail_name, test_point in kwargs['voltage_rails'].items():
             result += in_range_list(test_point.value, expected_ranges[rail_name], rail_name)
+        return result
+
+    def rms6_jumper_reading(self):
+        result = TestResult()
+        expected_ranges = CLC_Profile.expected_measurement['Jumper']['RMS6']
+        for jumper_label, test_point in self.jig.rms6_switch_power_rails.items():
+            result += in_range_list(test_point.value, expected_ranges, jumper_label)
         return result
 
     def start_oocd(self):
@@ -283,11 +222,26 @@ class CLC_Profile(Profile):
         self.jig.oocd.memprog_init(0x20004C00)
 
         LOAD_TEST_SHELL_EVENT.set()
+        self.jig.led_red.configure()
+        self.jig.led_green.configure()
+        self.jig.led_sys_red.configure()
+        self.jig.led_sys_green.configure()
+        self.jig.led_can_err.configure()
+        self.jig.led_red.value = False
+        self.jig.led_green.value = False
+        self.jig.led_sys_red.value = False
+        self.jig.led_sys_green.value = False
+        self.jig.led_can_err.value = False
+
         return result
 
-    def connector_detection(self):
+    def connector_detection(self, **kwargs):
+        try:
+            connectors_probes = kwargs["connectors_probes"]
+        except KeyError:
+            return TestResult(False, "Connector Detection", "", "", "Connector probe information missing")
         result = TestResult()
-        for connector_position, test_point in self.jig.rms6_connector_probes.items():
+        for connector_position, test_point in connectors_probes.items():
             result += TestResult(
                 test_point.value,
                 connector_position,
@@ -299,12 +253,17 @@ class CLC_Profile(Profile):
                 break
         return result
 
-    def button_press_check(self):
+    def button_press_check(self, **kwargs):
         LOAD_TEST_SHELL_EVENT.wait()
+        try:
+            button_press_detection = kwargs["button_press_detection"]
+        except KeyError:
+            return TestResult(False, "Button Press Check", "", "", "Button press detection missing")
         result = TestResult()
         self.jig.rms6_button_press()
+        self.jig.gsm8_button_press()
         sleep(0.5)
-        for button_name, test_firmware_resource in self.jig.rms6_push_button_resources.items():
+        for button_name, test_firmware_resource in button_press_detection.items():
             result += TestResult(
                 test_firmware_resource.value,
                 button_name,
@@ -315,6 +274,7 @@ class CLC_Profile(Profile):
             if result.is_fail():
                 break
         self.jig.rms6_button_release()
+        self.jig.gsm8_button_release()
         sleep(0.1)
         return result
 
@@ -322,6 +282,7 @@ class CLC_Profile(Profile):
         LOAD_TEST_SHELL_EVENT.wait()
         result = TestResult()
         for relay_control_label, (test_firmware_resource, uio_reading) in self.jig.rms6_relay_control.items():
+            test_firmware_resource.configure()
             print(f"{relay_control_label} CLEAR")
             test_firmware_resource.value = 0
             result += TestResult(
@@ -348,7 +309,7 @@ class CLC_Profile(Profile):
     def program_flash(self):
         LOAD_TEST_SHELL_EVENT.wait()
         try:
-            flash_firmware = os.path.join(os.path.dirname(__file__), "build\\RM_V1.1(Build3.66).hex").replace("\\", "/")
+            flash_firmware = os.path.join(os.path.dirname(__file__), f"firmware\\{CLC_Profile.FIRMWARE}.hex").replace("\\", "/")
             # flash_firmware = os.path.join(os.path.dirname(__file__), "build\\clc_led_toggle.hex").replace("\\", "/")
 
             self.jig.oocd.memprog_submit(0, 0, 60)
@@ -361,30 +322,232 @@ class CLC_Profile(Profile):
         except:
             raise
 
-
+    @retry_func(3)
     def read_address(self):
         LOAD_TEST_SHELL_EVENT.wait()
-        self.jig.led_red.value = 0
-        self.jig.led_green.value = 0
+
         result = TestResult()
         for address_pin_label, address_pin_resource in self.jig.rms6_address_test_firmware_resources.items():
             address_pin_resource.configure()
+            self.jig.led_red.value = False
+            self.jig.led_green.value = False
             result += TestResult(address_pin_resource.value == self.expected_measurement["Address"][address_pin_label],
                                  address_pin_label,
-                                 f"{address_pin_label} {'on' if self.expected_measurement['Address'][address_pin_label] else 'off'}",
-                                 f"{address_pin_label} {'on' if address_pin_resource.value else 'off'}",
+                                 f"{address_pin_label} {'High' if self.expected_measurement['Address'][address_pin_label] else 'Low'}",
+                                 f"{address_pin_label} {'High' if address_pin_resource.value else 'Low'}",
                                  "")
         return result
 
-
+    @retry_func(5)
     def relay_feedback(self):
         LOAD_TEST_SHELL_EVENT.wait()
         result = TestResult()
         for relay_feedback_label, relay_feedback_resource in self.jig.rms6_relay_feedback.items():
+            relay_feedback_resource.configure()
             result += in_range_list(relay_feedback_resource.value, [2.0, 3.0], relay_feedback_label)
             if result.is_fail():
                 break
         return result
+
+    @retry_func(3)
+    def switch_control_feedback(self):
+        LOAD_TEST_SHELL_EVENT.wait()
+        result = TestResult()
+        self.jig.rms6_switch_on_control.value = 0
+        self.jig.rms6_switch_off_control.value = 0
+        sleep(0.1)
+        for switch_control_label, switch_control_reading_resource in self.jig.rms6_switch_control_feedback.items():
+            switch_control_reading_resource.configure()
+            result += TestResult(
+                switch_control_reading_resource.value == False,
+                switch_control_label,
+                "Switch Off",
+                "Switch On" if switch_control_reading_resource.value else "Switch Off",
+                ""
+            )
+            if result.is_fail():
+                return result
+
+        self.jig.rms6_switch_on_control.value = 1
+        self.jig.rms6_switch_off_control.value = 1
+        sleep(0.1)
+        for switch_control_label, switch_control_reading_resource in self.jig.rms6_switch_control_feedback.items():
+            result += TestResult(
+                switch_control_reading_resource.value == True,
+                switch_control_label,
+                "Switch On",
+                "Switch On" if switch_control_reading_resource.value else "Switch Off",
+                ""
+            )
+            if result.is_fail():
+                return result
+        return  result
+
+    def can_termination_test(self):
+        result = TestResult()
+        self.jig.can_termination_test_control.value = 0
+        sleep(0.1)
+        pre_additional_resistance_measurement = self.jig.can_h_measurement.value
+        result += TestResult(True, "Before adding resistance", "", pre_additional_resistance_measurement, "")
+        self.jig.can_termination_test_control.value = 1
+        sleep(0.1)
+        post_additional_resistance_measurement = self.jig.can_h_measurement.value
+        result += TestResult(True, "After adding resistance", "", post_additional_resistance_measurement, "")
+        return result
+
+    def can(self):
+        LOAD_TEST_SHELL_EVENT.wait()
+        result = TestResult()
+        for frame in (CANFrame(self.jig.can_id, b'\x55\xFF\xAB\x5C\xC5\xD3\xFF\x55'),
+                      CANFrame(self.jig.can_id, b'\x34\x23\xDF\x3E\xE3\xC2\x2C\x22')):
+            self.jig.rms6_can_bus_resource.flush()
+            self.jig.rms6_can_bus_resource.write(frame)
+            sleep(0.1)
+            resp = self.jig.daq2_can.read()
+            res = resp is not None and resp.can_id == frame.can_id and resp.data == frame.data
+            result += TestResult(res, f"DUT->DAQ", frame, resp,
+                                 "Correct response" if res else "Incorrect response")
+            if result.is_fail():
+                return result
+
+            # self.jig.rms6_can_bus_resource.flush()
+            # self.jig.daq2_can.write(frame)
+            # sleep(0.1)
+            # resp = self.jig.rms6_can_bus_resource.read()
+            # res = resp is not None and resp.can_id == frame.can_id and resp.data == frame.data
+            # result += TestResult(res, f"DAQ->DUT", frame, resp,
+            #                      "Correct response" if res else "Incorrect response")
+            # if result.is_fail():
+            #     return result
+        return result
+
+    def _test_relay_led(self, led_label: str, relay_switch_leds: dict):
+        result = TestResult()
+        # Red
+        relay_switch_leds[led_label][0].configure()
+        relay_switch_leds[led_label][0].value = True
+        self.jig.led_red.value = True
+        sleep(0.3)
+        result += TestResult(True, f"{led_label} RED", "",  relay_switch_leds[led_label][1].value, "")
+        self.jig.led_red.value = False
+        relay_switch_leds[led_label][0].value = False
+
+        # Green
+        self.jig.led_green.value = True
+        relay_switch_leds[led_label][0].value = True
+        sleep(0.3)
+        result += TestResult(True, f"{led_label} GREEN", "",  relay_switch_leds[led_label][1].value, "")
+        return result
+
+    def _test_system_led(self, sys_led_sensor):
+        result = TestResult()
+        self.jig.led_sys_red.value = True
+        sleep(0.3)
+        result += TestResult(True, "SYS RED", "", sys_led_sensor.value, "")
+        self.jig.led_sys_red.value = False
+        self.jig.led_sys_green.value = True
+        sleep(0.3)
+        result += TestResult(True, "SYS GREEN", "", sys_led_sensor.value, "")
+        return result
+
+    def can_led(self, *args, **kwargs):
+        try:
+            can_led_sensor = kwargs["can_led_sensor"]
+        except KeyError:
+            return TestResult(False, "CAN LED", "", "", "No CAN LED sensor to measure")
+        result = TestResult()
+        # Red
+        self.jig.led_can_err.value = True
+        sleep(0.5)
+        result += TestResult(True, "CAN RED", "", can_led_sensor.value, "")
+        self.jig.led_can_err.value = False
+        # Green
+        with self.jig.rms6_can_bus_resource.test(CANFrame(int(0), b'\x00\x00\x00\x00'), timeout=1.0):
+            sleep(0.5)
+            result += TestResult(True, "CAN GREEN", "", can_led_sensor.value, "")
+        return result
+
+    def led_test(self, *args, **kwargs):
+        if not kwargs["relay_switch_leds"]:
+            return TestResult(False, "LED Test", "", "", "Missing Relay/Switch LED Sensors")
+        if not kwargs["sys_led_sensor"]:
+            return TestResult(False, "LED Test", "", "", "Missing System LED Sensor")
+
+        relay_switch_leds = kwargs["relay_switch_leds"]
+        sys_led_sensor = kwargs["sys_led_sensor"]
+        result = TestResult()
+        for led_label in relay_switch_leds.keys():
+            result += self._test_relay_led(led_label, relay_switch_leds)
+            if result.is_fail():
+                return result
+        result += self._test_system_led(sys_led_sensor)
+        if result.is_fail():
+            return result
+        return result
+
+    def spi_test(self, **kwargs):
+        try:
+            sn = kwargs["sn"]
+        except KeyError:
+            return TestResult(False, "SPI Test", "", "", "Missing SN")
+        sn = int(sn)
+        sn_in_bytes = sn.to_bytes(4, byteorder='big')
+        sn_write_instruction = b'\x02\x00\x00' + sn_in_bytes
+        # Enable write instruction
+        self.jig.gsm8_spi.transfer(b'\x06')
+        # Send sn through SPI
+        self.jig.gsm8_spi.transfer(sn_write_instruction)
+        # Read back sn
+        resp = self.jig.gsm8_spi.transfer(b'\x03\x00\x00\x00\x00\x00\x00')
+        sn_read_back = int.from_bytes(resp[3:], byteorder='big')
+
+        return TestResult(
+            sn == sn_read_back,
+            "SPI Test",
+            f"SN sent: {sn}",
+            f"SN read back: {sn_read_back}",
+            "Correct response" if sn == sn_read_back else "Incorrect response"
+        )
+
+
+    def gsm8_jumper_reading(self):
+        result = TestResult()
+        expected_ranges = CLC_Profile.expected_measurement['Jumper']['GSM8']
+        for jumper_label, test_point in self.jig.gsm8_jumper_measurement.items():
+            result += in_range_list(test_point.value, expected_ranges, jumper_label)
+        return result
+
+
+    def gsm8_sw_pilot(self):
+        result = TestResult()
+        for sw_pilot_label, test_point in self.jig.gsm8_pilot_voltage_measurement.items():
+            result += in_range_list(test_point.value, [15, 25], sw_pilot_label)
+        return result
+
+    @retry_func(3)
+    def gsm8_sw_feedback(self):
+        result = TestResult()
+        for sw_label, sw_on_feedback in self.jig.gsm8_switch_on_feedback.items():
+            sw_on_feedback.configure()
+            result += in_range_list(sw_on_feedback.value, [3.0, 3.4], sw_label)
+        for sw_label, sw_off_feedback in self.jig.gsm8_switch_off_feedback.items():
+            result += TestResult(not sw_off_feedback.value, sw_label, "Negative Feedback", "Negative Feedback" if not sw_off_feedback.value else "Positive Feedback", "")
+
+        for sw_label, simulation in self.jig.gsm8_switch_off_simulation.items():
+            simulation.value = 1
+
+        sleep(1)
+        for sw_label, sw_on_feedback in self.jig.gsm8_switch_on_feedback.items():
+            sw_on_feedback.configure()
+            result += in_range_list(sw_on_feedback.value, [0.0, 0.5], sw_label)
+        for sw_label, sw_off_feedback in self.jig.gsm8_switch_off_feedback.items():
+            result += TestResult(sw_off_feedback.value, sw_label, "Positive Feedback", "Positive Feedback" if sw_off_feedback.value else "Negative Feedback", "")
+
+        for sw_label, simulation in self.jig.gsm8_switch_off_simulation.items():
+            simulation.value = 0
+
+        return result
+
 
     def test_suit_clean_up(self):
         self.stop_oocd()
