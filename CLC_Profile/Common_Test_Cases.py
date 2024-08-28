@@ -63,19 +63,13 @@ class CommonTestCases:
                                function=self._profile.test_case_scheduler.TestCaseWaiter,
                                parameters={"connectors_probes": connectors_probes} if connectors_probes else {})
 
-        button_press_detection = None
-        if _product == "CLCRMS6":
-            button_press_detection = self._profile.jig.rms6_button_press_detection
-        elif _product == "CLCGSM8":
-            button_press_detection = self._profile.jig.gsm8_button_press_detection
         self._profile.add_test("Button Press Check",
                                prerequisites=["Load Test Shell"],
                                description="Check if buttons are pressed",
                                verify_function=lambda x: x,
-                               # function=self.button_press_check,
                                real_function=self._profile.button_press_check,
                                function=self._profile.test_case_scheduler.TestCaseWaiter,
-                               parameters={"button_press_detection": button_press_detection} if button_press_detection else {})
+                               )
 
         self._profile.add_test("Address",
                                prerequisites=["Load Test Shell"],
@@ -84,14 +78,14 @@ class CommonTestCases:
                                real_function=self._profile.read_address,
                                function=self._profile.test_case_scheduler.TestCaseWaiter)
 
-        relay_switch_leds = None
-        sys_led_sensor = None
+        switch_led_sensors = None
+        sys_led_sensors = None
         if _product == "CLCRMS6":
-            relay_switch_leds = self._profile.jig.rms6_relay_leds
-            sys_led_sensor = self._profile.jig.rms6_sys_led_sensor
+            switch_led_sensors = self._profile.jig.rms6_switch_led_sensors
+            sys_led_sensors = self._profile.jig.rms6_sys_led_sensor
         elif _product == "CLCGSM8":
-            relay_switch_leds = self._profile.jig.gsm8_switch_leds
-            sys_led_sensor = self._profile.jig.gsm8_sys_led_sensor
+            switch_led_sensors = self._profile.jig.gsm8_switch_leds_sensors
+            sys_led_sensors = self._profile.jig.gsm8_sys_led_sensor
         self._profile.add_test("LED Test",
                                prerequisites=["Load Test Shell", "Address"],
                                description="Test the LEDs",
@@ -99,10 +93,10 @@ class CommonTestCases:
                                real_function=self._profile.led_test,
                                function=self._profile.test_case_scheduler.TestCaseWaiter,
                                parameters={
-                                       "relay_switch_leds": relay_switch_leds if relay_switch_leds else None,
-                                       "sys_led_sensor": sys_led_sensor if sys_led_sensor else None
-                                   })
-
+                                       "switch_led_sensors": switch_led_sensors if switch_led_sensors else None,
+                                       "sys_led_sensors": sys_led_sensors if sys_led_sensors else None
+                                   }
+                               )
 
         # self._profile.add_test("CAN Termination Test",
         #               prerequisites=["Load Test Shell"],

@@ -13,11 +13,10 @@ class RMS6TestCases:
                                function=self._profile.test_case_scheduler.TestCaseWaiter,
                                )
 
-        self._profile.add_test("Relay Control",
+        self._profile.add_test("Relay Control Signals",
                                prerequisites=["Load Test Shell"],
                                description="Control the relays",
                                verify_function=lambda x: x,
-                               # function=self.relay_control,
                                real_function=self._profile.relay_control,
                                function=self._profile.test_case_scheduler.TestCaseWaiter
                                )
