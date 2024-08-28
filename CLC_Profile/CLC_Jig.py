@@ -62,7 +62,7 @@ class CLC_Jig(TestJig, ABC):
         self.rms6_preliminary_voltage_rails = {
             "3V3": self.daq2.IO1,
             "5V0": self.daq2.IO2,
-            "PWR_OUT": self.daq2.AI17,
+            "PWR_PASS_THROUGH": self.daq2.AI17,
         }
 
         self.rms6_switch_power_rails = {
@@ -73,6 +73,8 @@ class CLC_Jig(TestJig, ABC):
             "SW5_PWR": self.daq2.AI22,
             "SW6_PWR": self.daq2.AI23
         }
+
+        self.rms6_nreverse_jumper = GPIOResource(self.test_shell, "RMS6_nREVERSE_JUMPER")
 
         self.gsm8_preliminary_voltage_rails = {
             "3V3": self.daq1.AI19,
@@ -105,25 +107,25 @@ class CLC_Jig(TestJig, ABC):
         tp41 = PCA9535A_GPIO(top_board_i2c, 0x27, 15, inverted_logic=True)
 
         self.gsm8_connector_probes = {
-            "GSM8_right_center_bottom_connector": tp40,
-            "GSM8_right_center_top_connector": tp39,
-            "GSM8_middle_bottom_connector": tp35,
-            "GSM8_right_top_connector": tp31,
-            "GSM8_left_center_connector": tp46,
-            "GSM8_left_bottom_connector": tp45,
-            "GSM8_left_top_connector": tp44,
-            "GSM8_right_bottom_connector": tp43,
-            "GSM8_middle_top_connector": tp41
+            "IP1 Connector": tp46,
+            "IP4 Connector": tp45,
+            "IP6 Connector": tp39,
+            "IP8 Connector": tp40,
+            "OUT RJ45 Connector": tp31,
+            "IN RJ45 Connector": tp43,
+            "P1 Connector": tp44,
+            "P902 Connector": tp35,
+            "P903 Connector": tp41
         }
 
         self.rms6_connector_probes = {
-            "RMS_right_top_connector": tp38,
-            "RMS_left_bottom_connector": tp37,
-            "RMS_middle_top_connector": tp36,
-            "RMS_left_center_connector": tp34,
-            "RMS_left_top_connector": tp33,
-            "RMS_middle_bottom_connector": tp32,
-            "RMS_right_bottom_connector": tp42,
+            "RLY1_2 Connector": tp33,
+            "RLY3_4 Connector": tp34,
+            "RLY5_6 Connector": tp37,
+            "SW1 Connector": tp38,
+            "WS6 Connector": tp42,
+            "P903 Connector": tp36,
+            "P902 Connector": tp32,
         }
 
         """
@@ -143,12 +145,12 @@ class CLC_Jig(TestJig, ABC):
         self.rms6_sys_led_sensor = TCS3472(rms6_led_u2)
 
         self.rms6_relay_leds = {
-            "LED_RLY1": (GPIOResource(self.test_shell, "LED_RLY1"), TCS3472(rms6_led_u4)),
-            # "LED_RLY2": (GPIOResource(self.test_shell, "LED_RLY2"), TCS3472(rms6_led_u3)),
-            "LED_RLY3": (GPIOResource(self.test_shell, "LED_RLY3"), TCS3472(rms6_led_u7)),
-            "LED_RLY4": (GPIOResource(self.test_shell, "LED_RLY4"), TCS3472(rms6_led_u8)),
-            "LED_RLY5": (GPIOResource(self.test_shell, "LED_RLY5"), TCS3472(rms6_led_u10)),
-            "LED_RLY6": (GPIOResource(self.test_shell, "LED_RLY6"), TCS3472(rms6_led_u11)),
+            "LED_SW1": (GPIOResource(self.test_shell, "LED_SW1"), TCS3472(rms6_led_u4)),
+            "LED_SW2": (GPIOResource(self.test_shell, "LED_SW2"), TCS3472(rms6_led_u3)),
+            "LED_SW3": (GPIOResource(self.test_shell, "LED_SW3"), TCS3472(rms6_led_u7)),
+            "LED_SW4": (GPIOResource(self.test_shell, "LED_SW4"), TCS3472(rms6_led_u8)),
+            "LED_SW5": (GPIOResource(self.test_shell, "LED_SW5"), TCS3472(rms6_led_u10)),
+            "LED_SW6": (GPIOResource(self.test_shell, "LED_SW6"), TCS3472(rms6_led_u11)),
         }
 
         self.led_green = GPIOResource(self.test_shell, "LED_GREEN")
@@ -156,7 +158,6 @@ class CLC_Jig(TestJig, ABC):
         self.led_sys_green = GPIOResource(self.test_shell, "LED_SYS_GREEN")
         self.led_sys_red = GPIOResource(self.test_shell, "LED_SYS_RED")
         self.led_can_err = GPIOResource(self.test_shell, "LED_CAN_ERR")
-
 
         gsm8_led_u12 = TCA9546A_I2C(top_board_i2c, 0x76, 0)
         gsm8_led_u13 = TCA9546A_I2C(top_board_i2c, 0x76, 1)
@@ -172,14 +173,14 @@ class CLC_Jig(TestJig, ABC):
         gsm8_led_u26 = TCA9546A_I2C(top_board_i2c, 0x70, 3)
 
         self.gsm8_switch_leds = {
-            "LED_SW1": (GPIOResource(self.test_shell, "LED_RLY1"), TCS3472(gsm8_led_u17)),
-            "LED_SW2": (GPIOResource(self.test_shell, "LED_RLY2"), TCS3472(gsm8_led_u18)),
-            "LED_SW3": (GPIOResource(self.test_shell, "LED_RLY3"), TCS3472(gsm8_led_u20)),
-            # "LED_SW4": (GPIOResource(self.test_shell, "LED_RLY4"), TCS3472(gsm8_led_u21)),
-            "LED_SW5": (GPIOResource(self.test_shell, "LED_RLY5"), TCS3472(gsm8_led_u12)),
-            "LED_SW6": (GPIOResource(self.test_shell, "LED_RLY6"), TCS3472(gsm8_led_u13)),
-            "LED_SW7": (GPIOResource(self.test_shell, "LED_RLY7"), TCS3472(gsm8_led_u14)),
-            "LED_SW8": (GPIOResource(self.test_shell, "LED_RLY8"), TCS3472(gsm8_led_u15)),
+            "LED_SW1": (GPIOResource(self.test_shell, "LED_SW1"), TCS3472(gsm8_led_u17)),
+            "LED_SW2": (GPIOResource(self.test_shell, "LED_SW2"), TCS3472(gsm8_led_u18)),
+            "LED_SW3": (GPIOResource(self.test_shell, "LED_SW3"), TCS3472(gsm8_led_u20)),
+            "LED_SW4": (GPIOResource(self.test_shell, "LED_SW4"), TCS3472(gsm8_led_u21)),
+            "LED_SW5": (GPIOResource(self.test_shell, "LED_SW5"), TCS3472(gsm8_led_u12)),
+            "LED_SW6": (GPIOResource(self.test_shell, "LED_SW6"), TCS3472(gsm8_led_u13)),
+            "LED_SW7": (GPIOResource(self.test_shell, "LED_SW7"), TCS3472(gsm8_led_u14)),
+            "LED_SW8": (GPIOResource(self.test_shell, "LED_SW8"), TCS3472(gsm8_led_u15)),
         }
 
         self.gsm8_can_led_sensor = TCS3472(gsm8_led_u23)
@@ -187,28 +188,27 @@ class CLC_Jig(TestJig, ABC):
         self.gsm8_pwr_in_led_sensor = TCS3472(gsm8_led_u25) # at the bottom of the product
         self.gsm8_pwr_in_led_sensor = TCS3472(gsm8_led_u26) # at the top of the product
 
-
         """
             Buttons
         """
         self.rms6_button_press_detection = {
-            "push_button_sw311": GPIOResource(self.test_shell, "RLAY_PB1"),
-            "push_button_sw301": GPIOResource(self.test_shell, "RLYB_PB1"),
-            "push_button_sw312": GPIOResource(self.test_shell, "RLYA_PB2"),
-            "push_button_sw302": GPIOResource(self.test_shell, "RLYB_PB2"),
-            "push_button_sw313": GPIOResource(self.test_shell, "RLYA_PB3"),
-            "push_button_sw303": GPIOResource(self.test_shell, "RLYB_PB3"),
+            "SW311": GPIOResource(self.test_shell, "RLAY_PB1"),
+            "SW301": GPIOResource(self.test_shell, "RLYB_PB1"),
+            "SW312": GPIOResource(self.test_shell, "RLYA_PB2"),
+            "SW302": GPIOResource(self.test_shell, "RLYB_PB2"),
+            "SW313": GPIOResource(self.test_shell, "RLYA_PB3"),
+            "SW303": GPIOResource(self.test_shell, "RLYB_PB3"),
         }
 
         self.gsm8_button_press_detection = {
-            "sw1": GPIOResource(self.test_shell, "RLAY_PB1"),
-            "sw2": GPIOResource(self.test_shell, "RLYB_PB1"),
-            "sw3": GPIOResource(self.test_shell, "RLYA_PB2"),
-            "sw4": GPIOResource(self.test_shell, "RLYB_PB2"),
-            "sw5": GPIOResource(self.test_shell, "RLYA_PB3"),
-            "sw6": GPIOResource(self.test_shell, "RLYB_PB3"),
-            "sw7": GPIOResource(self.test_shell, "RLYA_PB4"),
-            "sw8": GPIOResource(self.test_shell, "RLYB_PB4"),
+            "SW501": GPIOResource(self.test_shell, "RLAY_PB1"),
+            "SW601": GPIOResource(self.test_shell, "RLYB_PB1"),
+            "SW502": GPIOResource(self.test_shell, "RLYA_PB2"),
+            "SW602": GPIOResource(self.test_shell, "RLYB_PB2"),
+            "SW503": GPIOResource(self.test_shell, "RLYA_PB3"),
+            "SW603": GPIOResource(self.test_shell, "RLYB_PB3"),
+            "SW504": GPIOResource(self.test_shell, "RLYA_PB4"),
+            "SW604": GPIOResource(self.test_shell, "RLYB_PB4"),
         }
 
 
@@ -218,18 +218,18 @@ class CLC_Jig(TestJig, ABC):
         """
         wiring_board_gpio_20_expander_i2c = I2C(self.daq2, "EXP5", frequency=100000)
         self.rms6_relay_control = {
-            "relay1_off": (GPIOResource(self.test_shell, "RMS6_RLYA_OFF1"),PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 0)),
-            "relay1_on": (GPIOResource(self.test_shell, "RMS6_RLYA_ON1"),PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 1)),
-            "relay2_off": (GPIOResource(self.test_shell, "RMS6_RLYB_OFF1"),PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 2)),
-            "relay2_on": (GPIOResource(self.test_shell, "RMS6_RLYB_ON1"),PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 3)),
-            "relay3_off": (GPIOResource(self.test_shell, "RMS6_RLYA_OFF2"),PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 4)),
-            "relay3_on": (GPIOResource(self.test_shell, "RMS6_RLYA_ON2"),PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 5)),
-            "relay4_off": (GPIOResource(self.test_shell, "RMS6_RLYB_OFF2"),PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 6)),
-            "relay4_on": (GPIOResource(self.test_shell, "RMS6_RLYB_ON2"),PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 7)),
-            "relay5_off": (GPIOResource(self.test_shell, "RMS6_RLYA_OFF3"),PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 8)),
-            "relay5_on": (GPIOResource(self.test_shell, "RMS6_RLYA_ON3"),PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 9)),
-            "relay6_off": (GPIOResource(self.test_shell, "RMS6_RLYB_OFF3"),PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 10)),
-            "relay6_on": (GPIOResource(self.test_shell, "RMS6_RLYB_ON3"),PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 11)),
+            "RELAY1_OFF_SIGNAL": (GPIOResource(self.test_shell, "RMS6_RLYA_OFF1"), PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 0)),
+            "RELAY1_ON_SIGNAL": (GPIOResource(self.test_shell, "RMS6_RLYA_ON1"), PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 1)),
+            "RELAY2_OFF_SIGNAL": (GPIOResource(self.test_shell, "RMS6_RLYB_OFF1"), PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 2)),
+            "RELAY2_ON_SIGNAL": (GPIOResource(self.test_shell, "RMS6_RLYB_ON1"), PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 3)),
+            "RELAY3_OFF_SIGNAL": (GPIOResource(self.test_shell, "RMS6_RLYA_OFF2"), PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 4)),
+            "RELAY3_ON_SIGNAL": (GPIOResource(self.test_shell, "RMS6_RLYA_ON2"), PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 5)),
+            "RELAY4_OFF_SIGNAL": (GPIOResource(self.test_shell, "RMS6_RLYB_OFF2"), PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 6)),
+            "RELAY4_ON_SIGNAL": (GPIOResource(self.test_shell, "RMS6_RLYB_ON2"), PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 7)),
+            "RELAY5_OFF_SIGNAL": (GPIOResource(self.test_shell, "RMS6_RLYA_OFF3"), PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 8)),
+            "RELAY5_ON_SIGNAL": (GPIOResource(self.test_shell, "RMS6_RLYA_ON3"), PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 9)),
+            "RELAY6_OFF_SIGNAL": (GPIOResource(self.test_shell, "RMS6_RLYB_OFF3"), PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 10)),
+            "RELAY6_ON_SIGNAL": (GPIOResource(self.test_shell, "RMS6_RLYB_ON3"), PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 11)),
         }
 
         """
@@ -239,21 +239,19 @@ class CLC_Jig(TestJig, ABC):
         self.rms6_switch_off_control = PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 13, mode="op")
 
         self.rms6_switch_control_feedback = {
-            "swa_on1_control" : GPIOResource(self.test_shell, "RMS6_SWA_ON1"),
-            "swa_off1_control" : GPIOResource(self.test_shell, "RMS6_SWA_OFF1"),
-            "swb_on1_control" : GPIOResource(self.test_shell, "RMS6_SWB_ON1"),
-            "swb_off1_control" : GPIOResource(self.test_shell, "RMS6_SWB_OFF1"),
-            "swa_on2_control" : GPIOResource(self.test_shell, "RMS6_SWA_ON2"),
-            "swa_off2_control" : GPIOResource(self.test_shell, "RMS6_SWA_OFF2"),
-            "swb_on2_control" : GPIOResource(self.test_shell, "RMS6_SWB_ON2"),
-            "swb_off2_control" : GPIOResource(self.test_shell, "RMS6_SWB_OFF2"),
-            "swa_on3_control" : GPIOResource(self.test_shell, "RMS6_SWA_ON3"),
-            "swa_off3_control" : GPIOResource(self.test_shell, "RMS6_SWA_OFF3"),
-            "swb_on3_control" : GPIOResource(self.test_shell, "RMS6_SWB_ON3"),
-            "swb_off3_control" : GPIOResource(self.test_shell, "RMS6_SWB_OFF3"),
+            "SW1_ON_SIGNAL": GPIOResource(self.test_shell, "RMS6_SWA_ON1"),
+            "SW1_OFF_SIGNAL": GPIOResource(self.test_shell, "RMS6_SWA_OFF1"),
+            "SW2_ON_SIGNAL": GPIOResource(self.test_shell, "RMS6_SWB_ON1"),
+            "SW2_OFF_SIGNAL": GPIOResource(self.test_shell, "RMS6_SWB_OFF1"),
+            "SW3_ON_SIGNAL": GPIOResource(self.test_shell, "RMS6_SWA_ON2"),
+            "SW3_OFF_SIGNAL": GPIOResource(self.test_shell, "RMS6_SWA_OFF2"),
+            "SW4_ON_SIGNAL": GPIOResource(self.test_shell, "RMS6_SWB_ON2"),
+            "SW4_OFF_SIGNAL": GPIOResource(self.test_shell, "RMS6_SWB_OFF2"),
+            "SW5_ON_SIGNAL": GPIOResource(self.test_shell, "RMS6_SWA_ON3"),
+            "SW5_OFF_SIGNAL": GPIOResource(self.test_shell, "RMS6_SWA_OFF3"),
+            "SW6_ON_SIGNAL": GPIOResource(self.test_shell, "RMS6_SWB_ON3"),
+            "SW6_OFF_SIGNAL": GPIOResource(self.test_shell, "RMS6_SWB_OFF3"),
         }
-
-
 
         """
             Address
@@ -269,29 +267,42 @@ class CLC_Jig(TestJig, ABC):
             "address_pin_8": GPIOResource(self.test_shell, "ADDR_8"),
         }
 
+        self.tens_address_pins = [
+            GPIOResource(self.test_shell, "ADDR_1"),
+            GPIOResource(self.test_shell, "ADDR_2"),
+            GPIOResource(self.test_shell, "ADDR_3"),
+            GPIOResource(self.test_shell, "ADDR_4"),
+        ]
+
+        self.ones_address_pins = [
+            GPIOResource(self.test_shell, "ADDR_5"),
+            GPIOResource(self.test_shell, "ADDR_6"),
+            GPIOResource(self.test_shell, "ADDR_7"),
+            GPIOResource(self.test_shell, "ADDR_8"),
+        ]
 
         """
             Relay feedback
         """
         self.rms6_relay_feedback = {
-            "relay_a_feedback_1": ADCResource(self.test_shell, "ADC04"),
-            "relay_b_feedback_1": ADCResource(self.test_shell, "ADC05"),
-            "relay_a_feedback_2": ADCResource(self.test_shell, "ADC06"),
-            "relay_b_feedback_2": ADCResource(self.test_shell, "ADC07"),
-            "relay_a_feedback_3": ADCResource(self.test_shell, "ADC10"),
-            "relay_b_feedback_3": ADCResource(self.test_shell, "ADC11"),
+            "RELAY1_PILOT_FEEDBACK": ADCResource(self.test_shell, "ADC04"),
+            "RELAY2_PILOT_FEEDBACK": ADCResource(self.test_shell, "ADC05"),
+            "RELAY3_PILOT_FEEDBACK": ADCResource(self.test_shell, "ADC06"),
+            "RELAY4_PILOT_FEEDBACK": ADCResource(self.test_shell, "ADC07"),
+            "RELAY5_PILOT_FEEDBACK": ADCResource(self.test_shell, "ADC10"),
+            "RELAY6_PILOT_FEEDBACK": ADCResource(self.test_shell, "ADC11"),
         }
 
         """
             Jumper
         """
         self.rms6_jumpers = {
-            "jumper_1": self.daq2.AI24,
-            "jumper_2": self.daq2.AI25,
-            "jumper_3": self.daq2.AI26,
-            "jumper_4": self.daq2.AI27,
-            "jumper_5": self.daq2.AI28,
-            "jumper_6": self.daq2.AI29,
+            "J311": self.daq2.AI24,
+            "J301": self.daq2.AI25,
+            "J312": self.daq2.AI26,
+            "J302": self.daq2.AI27,
+            "J313": self.daq2.AI28,
+            "J303": self.daq2.AI29,
 
         }
 
@@ -301,11 +312,13 @@ class CLC_Jig(TestJig, ABC):
         """
         self.can_termination_test_control = PCA9535A_GPIO(wiring_board_gpio_20_expander_i2c, 0x20, 14, mode="op", inverted_logic=True)
         self.can_termination_test_control.value = 0
-        self.rms6_can_bus_resource = CANResource(self.test_shell, "CAN")
+        self.dut_can_resource = CANResource(self.test_shell, "CAN")
         self.daq2_can = CAN(self.daq2)
         self._can_id = 4
-        self.can_h_measurement = self.daq2.IO3
-        self.can_l_measurement = self.daq2.IO4
+        self.can_h = self.daq2.IO3
+        self.can_h.mode = "ip"
+        self.can_l = self.daq2.IO4
+        self.can_l.mode = "ip"
 
         """
             SPI
@@ -316,65 +329,61 @@ class CLC_Jig(TestJig, ABC):
             GSM8 Jumpers
         """
         self.gsm8_jumper_measurement = {
-            "jumper_1": self.daq1.IO9,
-            "jumper_2": self.daq1.IO10,
-            "jumper_3": self.daq1.IO11,
-            "jumper_4": self.daq1.IO12,
-            "jumper_5": self.daq1.IO13,
-            "jumper_6": self.daq1.IO14,
-            "jumper_7": self.daq1.IO15,
-            "jumper_8": self.daq1.IO16,
+            "P501": self.daq1.IO9,
+            "P601": self.daq1.IO10,
+            "P502": self.daq1.IO11,
+            "P602": self.daq1.IO12,
+            "P503": self.daq1.IO13,
+            "P603": self.daq1.IO14,
+            "P504": self.daq1.IO15,
+            "P604": self.daq1.IO16,
         }
 
-
-        """
-            GSM8 Pilot light control and reading
-        """
         self.gsm8_pilot_voltage_measurement = {
-            "pilot_1": self.daq1.IO1,
-            "pilot_2": self.daq1.IO2,
-            "pilot_3": self.daq1.IO3,
-            "pilot_4": self.daq1.IO4,
-            "pilot_5": self.daq1.IO5,
-            "pilot_6": self.daq1.IO6,
-            "pilot_7": self.daq1.IO7,
-            "pilot_8": self.daq1.IO8,
+            "IP1_PILOT_FEEDBACK": self.daq1.IO1,
+            "IP2_PILOT_FEEDBACK": self.daq1.IO2,
+            "IP3_PILOT_FEEDBACK": self.daq1.IO3,
+            "IP4_PILOT_FEEDBACK": self.daq1.IO4,
+            "IP5_PILOT_FEEDBACK": self.daq1.IO5,
+            "IP6_PILOT_FEEDBACK": self.daq1.IO6,
+            "IP7_PILOT_FEEDBACK": self.daq1.IO7,
+            "IP8_PILOT_FEEDBACK": self.daq1.IO8,
         }
 
-        self.gsm8_pilot_enable = {
-            "pilot_1": GPIOResource(self.test_shell, "GSM8_SWA_PILOT1"),
-            "pilot_2": GPIOResource(self.test_shell, "GSM8_SWB_PILOT1"),
-            "pilot_3": GPIOResource(self.test_shell, "GSM8_SWA_PILOT2"),
-            "pilot_4": GPIOResource(self.test_shell, "GSM8_SWB_PILOT2"),
-            "pilot_5": GPIOResource(self.test_shell, "GSM8_SWA_PILOT3"),
-            "pilot_6": GPIOResource(self.test_shell, "GSM8_SWB_PILOT3"),
-            "pilot_7": GPIOResource(self.test_shell, "GSM8_SWA_PILOT4"),
-            "pilot_8": GPIOResource(self.test_shell, "GSM8_SWB_PILOT4"),
+        self.gsm8_pilot_light_fw_control = {
+            "IP1_PILOT_FEEDBACK": GPIOResource(self.test_shell, "GSM8_SWA_PILOT1"),
+            "IP2_PILOT_FEEDBACK": GPIOResource(self.test_shell, "GSM8_SWB_PILOT1"),
+            "IP3_PILOT_FEEDBACK": GPIOResource(self.test_shell, "GSM8_SWA_PILOT2"),
+            "IP4_PILOT_FEEDBACK": GPIOResource(self.test_shell, "GSM8_SWB_PILOT2"),
+            "IP5_PILOT_FEEDBACK": GPIOResource(self.test_shell, "GSM8_SWA_PILOT3"),
+            "IP6_PILOT_FEEDBACK": GPIOResource(self.test_shell, "GSM8_SWB_PILOT3"),
+            "IP7_PILOT_FEEDBACK": GPIOResource(self.test_shell, "GSM8_SWA_PILOT4"),
+            "IP8_PILOT_FEEDBACK": GPIOResource(self.test_shell, "GSM8_SWB_PILOT4"),
         }
 
         """
             GSM8 Switch Feedback
         """
         self.gsm8_switch_on_feedback = {
-            "sw1_on_feedback": ADCResource(self.test_shell, "ADC04"),
-            "sw2_on_feedback": ADCResource(self.test_shell, "ADC05"),
-            "sw3_on_feedback": ADCResource(self.test_shell, "ADC06"),
-            "sw4_on_feedback": ADCResource(self.test_shell, "ADC07"),
-            "sw5_on_feedback": ADCResource(self.test_shell, "ADC10"),
-            "sw6_on_feedback": ADCResource(self.test_shell, "ADC11"),
-            "sw7_on_feedback": ADCResource(self.test_shell, "ADC12"),
-            "sw8_on_feedback": ADCResource(self.test_shell, "ADC13"),
+            "IP1_ON_SIGNAL": ADCResource(self.test_shell, "ADC04"),
+            "IP2_ON_SIGNAL": ADCResource(self.test_shell, "ADC05"),
+            "IP3_ON_SIGNAL": ADCResource(self.test_shell, "ADC06"),
+            "IP4_ON_SIGNAL": ADCResource(self.test_shell, "ADC07"),
+            "IP5_ON_SIGNAL": ADCResource(self.test_shell, "ADC10"),
+            "IP6_ON_SIGNAL": ADCResource(self.test_shell, "ADC11"),
+            "IP7_ON_SIGNAL": ADCResource(self.test_shell, "ADC12"),
+            "IP8_ON_SIGNAL": ADCResource(self.test_shell, "ADC13"),
         }
 
         self.gsm8_switch_off_feedback = {
-            "sw1_off_feedback": GPIOResource(self.test_shell, "GSM8_SWA_OFF1"),
-            "sw2_off_feedback": GPIOResource(self.test_shell, "GSM8_SWB_OFF1"),
-            "sw3_off_feedback": GPIOResource(self.test_shell, "GSM8_SWA_OFF2"),
-            "sw4_off_feedback": GPIOResource(self.test_shell, "GSM8_SWB_OFF2"),
-            "sw5_off_feedback": GPIOResource(self.test_shell, "GSM8_SWA_OFF3"),
-            "sw6_off_feedback": GPIOResource(self.test_shell, "GSM8_SWB_OFF3"),
-            "sw7_off_feedback": GPIOResource(self.test_shell, "GSM8_SWA_OFF4"),
-            "sw8_off_feedback": GPIOResource(self.test_shell, "GSM8_SWB_OFF4"),
+            "IP1_OFF_SIGNAL": GPIOResource(self.test_shell, "GSM8_SWA_OFF1"),
+            "IP2_OFF_SIGNAL": GPIOResource(self.test_shell, "GSM8_SWB_OFF1"),
+            "IP3_OFF_SIGNAL": GPIOResource(self.test_shell, "GSM8_SWA_OFF2"),
+            "IP4_OFF_SIGNAL": GPIOResource(self.test_shell, "GSM8_SWB_OFF2"),
+            "IP5_OFF_SIGNAL": GPIOResource(self.test_shell, "GSM8_SWA_OFF3"),
+            "IP6_OFF_SIGNAL": GPIOResource(self.test_shell, "GSM8_SWB_OFF3"),
+            "IP7_OFF_SIGNAL": GPIOResource(self.test_shell, "GSM8_SWA_OFF4"),
+            "IP8_OFF_SIGNAL": GPIOResource(self.test_shell, "GSM8_SWB_OFF4"),
         }
 
         wiring_board_gpio_23_expander_i2c = I2C(self.daq1, "EXP2", frequency=100000)

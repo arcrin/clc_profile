@@ -110,6 +110,9 @@ led_rly6_resource = GPIOResource(test_shell, "LED_RLY6")
 led_sys_green_resource = GPIOResource(test_shell, "LED_SYS_GREEN")
 led_sys_red_resource = GPIOResource(test_shell, "LED_SYS_RED")
 led_can_err_resource = GPIOResource(test_shell, "LED_CAN_ERR")
+led_can_rx_debug = GPIOResource(test_shell, "CAN_RX_DEBUG")
+led_can_rx_ip = GPIOResource(test_shell, "CAN_RX")
+
 
 rms6_led_u1 = TCA9546A_I2C(top_board_i2c, 0x74, 0)
 rms6_led_u2 = TCA9546A_I2C(top_board_i2c, 0x74, 1)
@@ -120,22 +123,22 @@ rms6_led_u8 = TCA9546A_I2C(top_board_i2c, 0x75, 1)
 rms6_led_u10 = TCA9546A_I2C(top_board_i2c, 0x75, 2)
 rms6_led_u11 = TCA9546A_I2C(top_board_i2c, 0x75, 3)
 
-can_led_sensor = TCS3472(rms6_led_u1)
-sys_led_sensor = TCS3472(rms6_led_u2)
-relay1_led_sensor = TCS3472(rms6_led_u4)
-# relay2_led_sensor = TCS3472(rms6_led_u3)
-relay3_led_sensor = TCS3472(rms6_led_u7)
-relay4_led_sensor = TCS3472(rms6_led_u8)
-relay5_led_sensor = TCS3472(rms6_led_u10)
-relay6_led_sensor = TCS3472(rms6_led_u11)
+rms6_can_led_sensor = TCS3472(rms6_led_u1)
+rms6_sys_led_sensor = TCS3472(rms6_led_u2)
+rms6_relay1_led_sensor = TCS3472(rms6_led_u4)
+rms6_relay2_led_sensor = TCS3472(rms6_led_u3)
+rms6_relay3_led_sensor = TCS3472(rms6_led_u7)
+rms6_relay4_led_sensor = TCS3472(rms6_led_u8)
+rms6_relay5_led_sensor = TCS3472(rms6_led_u10)
+rms6_relay6_led_sensor = TCS3472(rms6_led_u11)
 
 rms6_relay_leds = {
-    "LED_RLY1": (led_rly1_resource, relay1_led_sensor),
-    # "LED_RLY2": (led_rly2_resource, relay2_led_sensor),
-    "LED_RLY3": (led_rly3_resource, relay3_led_sensor),
-    "LED_RLY4": (led_rly4_resource, relay4_led_sensor),
-    "LED_RLY5": (led_rly5_resource, relay5_led_sensor),
-    "LED_RLY6": (led_rly6_resource, relay6_led_sensor),
+    "LED_RLY1": (led_rly1_resource, rms6_relay1_led_sensor),
+    "LED_RLY2": (led_rly2_resource, rms6_relay2_led_sensor),
+    "LED_RLY3": (led_rly3_resource, rms6_relay3_led_sensor),
+    "LED_RLY4": (led_rly4_resource, rms6_relay4_led_sensor),
+    "LED_RLY5": (led_rly5_resource, rms6_relay5_led_sensor),
+    "LED_RLY6": (led_rly6_resource, rms6_relay6_led_sensor),
 }
 
 
@@ -164,17 +167,20 @@ gsm8_led_sw8 = GPIOResource(test_shell, "LED_RLY8")
 gsm8_led_sw1_sensor = TCS3472(gsm8_led_u17)
 gsm8_led_sw2_sensor = TCS3472(gsm8_led_u18)
 gsm8_led_sw3_sensor = TCS3472(gsm8_led_u20)
-# gsm8_led_sw4_sensor = TCS3472(gsm8_led_u21)
+gsm8_led_sw4_sensor = TCS3472(gsm8_led_u21)
 gsm8_led_sw5_sensor = TCS3472(gsm8_led_u12)
 gsm8_led_sw6_sensor = TCS3472(gsm8_led_u13)
 gsm8_led_sw7_sensor = TCS3472(gsm8_led_u14)
 gsm8_led_sw8_sensor = TCS3472(gsm8_led_u15)
 
+gsm8_can_led_sensor = TCS3472(gsm8_led_u23)
+gsm8_sys_led_sensor = TCS3472(gsm8_led_u22)
+
 gms8_switch_leds = {
     "LED_SW1": (gsm8_led_sw1, gsm8_led_sw1_sensor),
     "LED_SW2": (gsm8_led_sw2, gsm8_led_sw2_sensor),
     "LED_SW3": (gsm8_led_sw3, gsm8_led_sw3_sensor),
-    # "LED_SW4": (gsm8_led_sw4, gsm8_led_sw4_sensor),
+    "LED_SW4": (gsm8_led_sw4, gsm8_led_sw4_sensor),
     "LED_SW5": (gsm8_led_sw5, gsm8_led_sw5_sensor),
     "LED_SW6": (gsm8_led_sw6, gsm8_led_sw6_sensor),
     "LED_SW7": (gsm8_led_sw7, gsm8_led_sw7_sensor),
@@ -245,38 +251,38 @@ rms6_relay_control_feedback_readings = {
 
 
 rms6_relay_control ={
-    "relay1_off_test_firmware_resource": GPIOResource(test_shell, "RLYA_OFF1"),
-    "relay1_on_test_firmware_resource": GPIOResource(test_shell, "RLYA_ON1"),
-    "relay2_off_test_firmware_resource": GPIOResource(test_shell, "RLYB_OFF1"),
-    "relay2_on_test_firmware_resource": GPIOResource(test_shell, "RLYB_ON1"),
-    "relay3_off_test_firmware_resource": GPIOResource(test_shell, "RLYA_OFF2"),
-    "relay3_on_test_firmware_resource": GPIOResource(test_shell, "RLYA_ON2"),
-    "relay4_off_test_firmware_resource": GPIOResource(test_shell, "RLYB_OFF2"),
-    "relay4_on_test_firmware_resource": GPIOResource(test_shell, "RLYB_ON2"),
-    "relay5_off_test_firmware_resource": GPIOResource(test_shell, "RLYA_OFF3"),
-    "relay5_on_test_firmware_resource": GPIOResource(test_shell, "RLYA_ON3"),
-    "relay6_off_test_firmware_resource": GPIOResource(test_shell, "RLYB_OFF3"),
-    "relay6_on_test_firmware_resource": GPIOResource(test_shell, "RLYB_ON3"),
+    "relay1_off_test_firmware_resource": GPIOResource(test_shell, "RMS6_RLYA_OFF1"),
+    "relay1_on_test_firmware_resource": GPIOResource(test_shell, "RMS6_RLYA_ON1"),
+    "relay2_off_test_firmware_resource": GPIOResource(test_shell, "RMS6_RLYB_OFF1"),
+    "relay2_on_test_firmware_resource": GPIOResource(test_shell, "RMS6_RLYB_ON1"),
+    "relay3_off_test_firmware_resource": GPIOResource(test_shell, "RMS6_RLYA_OFF2"),
+    "relay3_on_test_firmware_resource": GPIOResource(test_shell, "RMS6_RLYA_ON2"),
+    "relay4_off_test_firmware_resource": GPIOResource(test_shell, "RMS6_RLYB_OFF2"),
+    "relay4_on_test_firmware_resource": GPIOResource(test_shell, "RMS6_RLYB_ON2"),
+    "relay5_off_test_firmware_resource": GPIOResource(test_shell, "RMS6_RLYA_OFF3"),
+    "relay5_on_test_firmware_resource": GPIOResource(test_shell, "RMS6_RLYA_ON3"),
+    "relay6_off_test_firmware_resource": GPIOResource(test_shell, "RMS6_RLYB_OFF3"),
+    "relay6_on_test_firmware_resource": GPIOResource(test_shell, "RMS6_RLYB_ON3"),
 }
 
-address_pin_1 = GPIOResource(test_shell, "ADDR_11")
-address_pin_2 = GPIOResource(test_shell, "ADDR_12")
-address_pin_4 = GPIOResource(test_shell, "ADDR_14")
-address_pin_8 = GPIOResource(test_shell, "ADDR_18")
-address_pin_11 = GPIOResource(test_shell, "ADDR_01")
-address_pin_12 = GPIOResource(test_shell, "ADDR_02")
-address_pin_14 = GPIOResource(test_shell, "ADDR_04")
-address_pin_18 = GPIOResource(test_shell, "ADDR_08")
+# address_pin_1 = GPIOResource(test_shell, "ADDR_11")
+# address_pin_2 = GPIOResource(test_shell, "ADDR_12")
+# address_pin_4 = GPIOResource(test_shell, "ADDR_14")
+# address_pin_8 = GPIOResource(test_shell, "ADDR_18")
+# address_pin_11 = GPIOResource(test_shell, "ADDR_01")
+# address_pin_12 = GPIOResource(test_shell, "ADDR_02")
+# address_pin_14 = GPIOResource(test_shell, "ADDR_04")
+# address_pin_18 = GPIOResource(test_shell, "ADDR_08")
 
 rms6_address_reading = {
-    "address_pin_1": address_pin_1,
-    "address_pin_2": address_pin_2,
-    "address_pin_3": address_pin_4,
-    "address_pin_4": address_pin_8,
-    "address_pin_5": address_pin_11,
-    "address_pin_6": address_pin_12,
-    "address_pin_7": address_pin_14,
-    "address_pin_8": address_pin_18,
+    "address_pin_1": GPIOResource(test_shell, "ADDR_1"),
+    "address_pin_2": GPIOResource(test_shell, "ADDR_2"),
+    "address_pin_3": GPIOResource(test_shell, "ADDR_3"),
+    "address_pin_4": GPIOResource(test_shell, "ADDR_4"),
+    "address_pin_5": GPIOResource(test_shell, "ADDR_5"),
+    "address_pin_6": GPIOResource(test_shell, "ADDR_6"),
+    "address_pin_7": GPIOResource(test_shell, "ADDR_7"),
+    "address_pin_8": GPIOResource(test_shell, "ADDR_8"),
 }
 
 relay_a_feedback_1 = ADCResource(test_shell, "RLYA_FB1")
@@ -332,12 +338,13 @@ rms6_switch_control_readings = {
 }
 
 daq_can = CAN(daq2)
-dut_can = CANResource(test_shell, "CAN")
 sample_can_data = CANFrame(int(4), b'\x68\x65\x6c\x6c\x6f')
-can_rx = GPIOResource(test_shell, "CAN_RX")
+can_rx = GPIOResource(test_shell, "CAN_RX_DEBUG")
+can_tx = GPIOResource(test_shell, "CAN_TX")
+dut_can = CANResource(test_shell, "CAN")
 can_termination_test_control = PCA9535A_GPIO(wiring_board_gpio_expander_0x20_i2c, 0x20, 14, mode="op")
-can_h_measurement = daq2.IO3
-can_l_measurement = daq2.IO4
+can_h = daq2.IO3
+can_l = daq2.IO4
 
 """
     SPI
@@ -433,6 +440,11 @@ gsm8_switch_off_feedback = {
     "sw8_off_feedback": GPIOResource(test_shell, "GSM8_SWB_OFF4"),
 }
 
+"""
+    RMS6 nREVERSE jumper
+"""
+rms6_nreverse_jumper = GPIOResource(test_shell, "RMS6_nREVERSE_JUMPER")
+
 
 def dut_power_on():
     daq2['VOUT_enable'].value = 1
@@ -519,8 +531,20 @@ def rms6_relay_control_sim():
         print(f"{test_point_name}: {test_point.value}\n")
 
 def address_reading():
+    led_red.configure()
+    led_green.configure()
+    led_sys_green_resource.configure()
+    led_sys_red_resource.configure()
+    led_can_err_resource.configure()
+    led_red.value = 0
+    led_green.value = 0
+    led_sys_red_resource.value = 0
+    led_sys_green_resource.value = 0
+    led_can_err_resource.value = 0
     for resource_name, resource in rms6_address_reading.items():
         resource.configure()
+        led_red.value = 0
+        led_green.value = 0
         print(f"{resource_name}: {resource.value}")
 
 def relay_feedback_reading():
@@ -541,54 +565,118 @@ def read_can():
 def test_relay_led_red(led_label: str):
     rms6_relay_leds[led_label][0].configure()
     rms6_relay_leds[led_label][0].value = True
-    led_red_resource.value = True
+    led_red.value = True
     sleep(0.3)
     print(f"{led_label} RED: {rms6_relay_leds[led_label][1].value}")
 
 def test_relay_led_green(led_label: str):
     rms6_relay_leds[led_label][0].configure()
     rms6_relay_leds[led_label][0].value = True
-    led_green_resource.value = True
+    led_green.value = True
     sleep(0.3)
     print(f"{led_label} GREEN: {rms6_relay_leds[led_label][1].value}")
 
 def turn_relay_led_off(led_label: str):
     rms6_relay_leds[led_label][0].value = False
-    led_green_resource.value = False
-    led_red_resource.value = False
+    led_green.value = False
+    led_red.value = False
 
 def test_system_led():
     led_sys_red_resource.value = True
     sleep(0.3)
-    print(f"SYS RED: {sys_led_sensor.value}")
+    print(f"SYS RED: {rms6_sys_led_sensor.value}")
     led_sys_red_resource.value = False
     led_sys_green_resource.value = True
     sleep(0.3)
-    print(f"SYS GREEN: {sys_led_sensor.value}")
+    print(f"SYS GREEN: {rms6_sys_led_sensor.value}")
     led_sys_green_resource.value = False
 
-def test_can_led():
+def test_rms6_can_led():
     led_can_err_resource.value = True
     sleep(0.5)
-    print(f"CAN RED: {can_led_sensor.value}")
+    led_red_reading = []
+    for i in range(100):
+        led_red_reading.append(rms6_can_led_sensor.value[1])
+    print(f"CAN RED: {sum(led_red_reading, start=0) / 100}")
+
     led_can_err_resource.value = False
     with dut_can.test(CANFrame(int(0), b'\x00\x00\x00\x00'), timeout=1.0) as can_test_async:
         sleep(0.5)
-        print(f"CAN GREEN: {can_led_sensor.value}")
+        led_greeen_readings = []
+        for i in range(100):
+            led_greeen_readings.append(rms6_can_led_sensor.value[2])
+        print(f"CAN GREEN: {sum(led_greeen_readings, start=0) / 100}")
 
 
+def test_gsm8_can_led():
+    led_can_err_resource.value = True
+    sleep(0.5)
+    led_red_reading = []
+    for i in range(100):
+        led_red_reading.append(gsm8_can_led_sensor.value[1])
+    print(f"CAN RED: {sum(led_red_reading, start=0) / 100}")
 
-def led_sensor_reading():
-    for resource_name in rms6_relay_leds.keys():
-        # Red
-        test_relay_led_red(resource_name)
-        turn_relay_led_off(resource_name)
-        # Green
-        test_relay_led_green(resource_name)
-        turn_relay_led_off(resource_name)
+    led_can_err_resource.value = False
+    with dut_can.test(CANFrame(int(0), b'\x00\x00\x00\x00'), timeout=1.0) as can_test_async:
+        sleep(0.5)
+        led_greeen_readings = []
+        for i in range(100):
+            led_greeen_readings.append(gsm8_can_led_sensor.value[2])
+        print(f"CAN GREEN: {sum(led_greeen_readings, start=0) / 100}")
 
-    test_system_led()
-    test_can_led()
+
+def rms6_led():
+    led_rly1_resource.value = 1
+    led_rly2_resource.value = 1
+    led_rly3_resource.value = 1
+    led_rly4_resource.value = 1
+    led_rly5_resource.value = 1
+    led_rly6_resource.value = 1
+    sleep(0.5)
+    print(f"rms6_can_led_sensor: {rms6_can_led_sensor.value}")
+    print(f"rms6_sys_led_sensor: {rms6_sys_led_sensor.value}")
+    print(f"rms6_relay1_led_sensor: {rms6_relay1_led_sensor.value}")
+    print(f"rms6_relay2_led_sensor: {rms6_relay2_led_sensor.value}")
+    print(f"rms6_relay3_led_sensor: {rms6_relay3_led_sensor.value}")
+    print(f"rms6_relay4_led_sensor: {rms6_relay4_led_sensor.value}")
+    print(f"rms6_relay5_led_sensor: {rms6_relay5_led_sensor.value}")
+    print(f"rms6_relay6_led_sensor: {rms6_relay6_led_sensor.value}")
+    sleep(0.5)
+    led_rly1_resource.value = 0
+    led_rly2_resource.value = 0
+    led_rly3_resource.value = 0
+    led_rly4_resource.value = 0
+    led_rly5_resource.value = 0
+    led_rly6_resource.value = 0
+
+def gsm8_led():
+    gsm8_led_sw1.value = 1
+    gsm8_led_sw2.value = 1
+    gsm8_led_sw3.value = 1
+    gsm8_led_sw4.value = 1
+    gsm8_led_sw5.value = 1
+    gsm8_led_sw6.value = 1
+    gsm8_led_sw7.value = 1
+    gsm8_led_sw8.value = 1
+    sleep(0.5)
+    print(f"gsm8_led_sw1_sensor: {gsm8_led_sw1_sensor.value}")
+    print(f"gsm8_led_sw2_sensor: {gsm8_led_sw2_sensor.value}")
+    print(f"gsm8_led_sw3_sensor: {gsm8_led_sw3_sensor.value}")
+    print(f"gsm8_led_sw4_sensor: {gsm8_led_sw4_sensor.value}")
+    print(f"gsm8_led_sw5_sensor: {gsm8_led_sw5_sensor.value}")
+    print(f"gsm8_led_sw6_sensor: {gsm8_led_sw6_sensor.value}")
+    print(f"gsm8_led_sw7_sensor: {gsm8_led_sw7_sensor.value}")
+    print(f"gsm8_led_sw8_sensor: {gsm8_led_sw8_sensor.value}")
+    sleep(0.5)
+    gsm8_led_sw1.value = 0
+    gsm8_led_sw2.value = 0
+    gsm8_led_sw3.value = 0
+    gsm8_led_sw4.value = 0
+    gsm8_led_sw5.value = 0
+    gsm8_led_sw6.value = 0
+    gsm8_led_sw7.value = 0
+    gsm8_led_sw8.value = 0
+
 
 def gsm8_jumper_readings():
     for jumper_label, jumper_measurement in gsm8_jumper_measurement.items():
@@ -607,7 +695,6 @@ def gsm8_pilot_control(state: bool):
         sleep(0.1)
         print(f"{pilot_label}: {pilot_enable.value}")
 
-
 def gsm8_sw_on_feedback():
     for sw_label, sw_off_feedback in gsm8_switch_on_feedback.items():
         sw_off_feedback.configure()
@@ -622,6 +709,17 @@ def gsm8_sw_feedback_simulation(state: bool):
     for sw_label, sw_off in gsm8_switch_feedback_simulation.items():
         sw_off.value = 1 if state else 0
 
+def relay5_off_control_debug():
+    while True:
+        print("Relay 5 off-control SET")
+        rms6_relay_control['relay5_off_test_firmware_resource'].value = 1
+        print(f"Relay 5 off-control feedback: {'SET' if rms6_relay_control_feedback_readings['relay5_off_reading'].value else 'CLEAR'}")
+        sleep(0.5)
+        print("Relay 5 off-control CLEAR")
+        rms6_relay_control['relay5_off_test_firmware_resource'].value = 0
+        print(f"Relay 5 off-control feedback: {'SET' if not rms6_relay_control_feedback_readings['relay5_off_reading'].value else 'CLEAR'}")
+        sleep(1)
+
 
 
 sleep(0.1)
@@ -629,15 +727,35 @@ front_panel.engage_mounting_plate()
 sleep(2)
 dut_power_on()
 sleep(0.5)
-# led_red_resource.configure()
-# led_green_resource.configure()
-# led_red_resource.value = False
-# led_green_resource.value = False
-# address_reading()
 # start_oocd()
 # sleep(0.2)
 # load_test_shell()
 # sleep(0.2)
+# led_green.value = 0
+# led_red.value = 0
+# led_rly1_resource.value = 0
+# led_rly2_resource.value = 0
+# led_rly3_resource.value = 0
+# led_rly4_resource.value = 0
+# led_rly5_resource.value = 0
+# led_rly6_resource.value = 0
 # led_sys_green_resource.value = 0
-#
-# led_sensor_reading()
+# led_sys_red_resource.value = 0
+# led_can_err_resource.value = 0
+# gsm8_led_sw1.value = 0
+# gsm8_led_sw2.value = 0
+# gsm8_led_sw3.value = 0
+# gsm8_led_sw4.value = 0
+# gsm8_led_sw5.value = 0
+# gsm8_led_sw6.value = 0
+# gsm8_led_sw7.value = 0
+# gsm8_led_sw8.value = 0
+# can_l.mode = "op"
+# can_h.mode = "op"
+# can_h.value = 3.5
+# can_l.value = 1.5
+# daq_can.close()
+# exp7 = daq2.EXP7
+# exp7p0 = exp7.create_gpio0(mode="op", default=0)
+# exp7p1 = exp7.create_gpio1(mode="op", default=0)
+

@@ -19,7 +19,7 @@ class GSM8TestCases:
 			prerequisites=["Load Test Shell"],
 			description="Control the relays",
 			verify_function=lambda x: x,
-			real_function=self._profile.gsm8_sw_pilot,
+			real_function=self._profile.gsm8_sw_pilot_light_control,
 			function=self._profile.test_case_scheduler.TestCaseWaiter
 		)
 
@@ -33,7 +33,7 @@ class GSM8TestCases:
 		)
 
 		self._profile.add_test(
-			"SPI",
+			"SPI EEPROM",
 			prerequisites=["Load Test Shell"],
 			description="Check SPI communication",
 			verify_function=lambda x: x,

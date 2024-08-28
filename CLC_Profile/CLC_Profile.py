@@ -2,7 +2,8 @@ import time
 
 from framework.components.profile import Profile
 from .CLC_Jig import CLC_Jig
-from .test_firmware.firmwareutil.resourceshell.py.CANResource import CANFrame
+from .test_firmware.firmwareutil.resourceshell.py.CANResource import CANFrame, CANResource
+from pyDAQ.CAN import CAN
 from .Common_Test_Cases import CommonTestCases
 from .RMS6_Test_Cases import RMS6TestCases
 from .GSM8_Test_Cases import GSM8TestCases
@@ -15,7 +16,7 @@ from interface.jflash import GetModuleInfo
 from interface.OpenOCD.OpenOCD import OpenOCD
 from test_jig_util.trace import format_exc_plus
 from test_jig_util.TCScheduler import TCScheduler
-from pyDAQ.DAQ import DAQ
+from dataclasses import dataclass
 import threading
 import logging
 import yaml
@@ -26,6 +27,7 @@ import serial
 OOCD_DEBUG = True
 
 LOAD_TEST_SHELL_EVENT = threading.Event()
+
 
 def ordered_load(stream, Loader=yaml.SafeLoader, object_pairs_hook=OrderedDict):
     class OrderedLoader(Loader):
@@ -84,6 +86,13 @@ class CLC_Profile(Profile):
             GSM8TestCases(self)
             CLC_Profile.FIRMWARE = "GS_V1.1(Build3.98)"
 
+        self.add_test("Program Flash",
+                      prerequisites=["Load Test Shell"],
+                      description="Program the flash",
+                      verify_function=lambda x: x,
+                      # function=self.program_flash,
+                      real_function=self.program_flash,
+                      function=self.test_case_scheduler.TestCaseWaiter)
 
     @classmethod
     def profile_clean_up(cls):
@@ -101,8 +110,6 @@ class CLC_Profile(Profile):
         cls.jig.daq1.close()
         cls.jig.daq2.close()
 
-
-
     def startup(self):
         self.jig.dut_power_on()
         sleep(0.5)
@@ -113,6 +120,7 @@ class CLC_Profile(Profile):
         self.test_case_scheduler.Start()
         return True
 
+    @retry_func(3)
     def preliminary_voltage_rails(self, *args, **kwargs):
         if 'voltage_rails' not in kwargs:
             return TestResult(False, "Preliminary Voltage Rails", "", "", "No voltage rails to measure")
@@ -130,6 +138,15 @@ class CLC_Profile(Profile):
         expected_ranges = CLC_Profile.expected_measurement['Jumper']['RMS6']
         for jumper_label, test_point in self.jig.rms6_switch_power_rails.items():
             result += in_range_list(test_point.value, expected_ranges, jumper_label)
+            if result.is_fail():
+                break
+        self.jig.rms6_nreverse_jumper.configure()
+        result += TestResult(self.jig.rms6_nreverse_jumper.value,
+                             "P101",
+                             "P101 Not Grounded",
+                             "P101 Jumper Not Grounded" if self.jig.rms6_nreverse_jumper.value
+                             else "P101 Jumper Grounded",
+                             "Only tests for grounding, can not test for shunt presence")
         return result
 
     def start_oocd(self):
@@ -227,11 +244,11 @@ class CLC_Profile(Profile):
         self.jig.led_sys_red.configure()
         self.jig.led_sys_green.configure()
         self.jig.led_can_err.configure()
-        self.jig.led_red.value = False
-        self.jig.led_green.value = False
-        self.jig.led_sys_red.value = False
-        self.jig.led_sys_green.value = False
-        self.jig.led_can_err.value = False
+        self.jig.led_red.value = 0
+        self.jig.led_green.value = 0
+        self.jig.led_sys_red.value = 0
+        self.jig.led_sys_green.value = 0
+        self.jig.led_can_err.value = 0
 
         return result
 
@@ -275,6 +292,18 @@ class CLC_Profile(Profile):
                 break
         self.jig.rms6_button_release()
         self.jig.gsm8_button_release()
+
+        for button_name, test_firmware_resource in button_press_detection.items():
+            result += TestResult(
+                not test_firmware_resource.value,
+                button_name,
+                "Button Released",
+                "Button Released" if not test_firmware_resource.value else "Button Stuck",
+                ""
+            )
+            if result.is_fail():
+                break
+
         sleep(0.1)
         return result
 
@@ -285,20 +314,22 @@ class CLC_Profile(Profile):
             test_firmware_resource.configure()
             print(f"{relay_control_label} CLEAR")
             test_firmware_resource.value = 0
+            feedback = uio_reading.value
             result += TestResult(
-                not uio_reading.value,
+                not feedback,
                 relay_control_label,
                 "CLEAR",
-                "CLEAR" if not uio_reading.value else "SET",
+                "CLEAR" if not feedback else "SET",
                 ""
             )
             print(f"{relay_control_label} SET")
             test_firmware_resource.value = 1
+            feedback = uio_reading.value
             result += TestResult(
-                uio_reading.value,
+                feedback,
                 relay_control_label,
                 "SET",
-                "SET" if uio_reading.value else "CLEAR",
+                "SET" if feedback else "CLEAR",
                 ""
             )
 
@@ -324,19 +355,40 @@ class CLC_Profile(Profile):
 
     @retry_func(3)
     def read_address(self):
+        expected_shift = self.expected_measurement['Address']['shift']
+
+        def shifted_number(number, shift):
+            return (number + 10 - shift) % 10
         LOAD_TEST_SHELL_EVENT.wait()
 
-        result = TestResult()
-        for address_pin_label, address_pin_resource in self.jig.rms6_address_test_firmware_resources.items():
-            address_pin_resource.configure()
-            self.jig.led_red.value = False
-            self.jig.led_green.value = False
-            result += TestResult(address_pin_resource.value == self.expected_measurement["Address"][address_pin_label],
-                                 address_pin_label,
-                                 f"{address_pin_label} {'High' if self.expected_measurement['Address'][address_pin_label] else 'Low'}",
-                                 f"{address_pin_label} {'High' if address_pin_resource.value else 'Low'}",
-                                 "")
-        return result
+        tens_digit = 0
+        for i in range(len(self.jig.tens_address_pins)):
+            self.jig.tens_address_pins[i].configure()
+            self.jig.led_red.value = 0
+            self.jig.led_green.value = 0
+            bit_value = int(self.jig.tens_address_pins[i].value)
+            tens_digit |= bit_value << i
+
+        shifted_tens_digit = shifted_number(tens_digit, expected_shift)
+
+        ones_digit = 0
+        for i in range(len(self.jig.ones_address_pins)):
+            self.jig.ones_address_pins[i].configure()
+            self.jig.led_red.value = 0
+            self.jig.led_green.value = 0
+            bit_value = int(self.jig.ones_address_pins[i].value)
+            ones_digit |= bit_value << i
+
+        shifted_ones_digit = shifted_number(ones_digit, expected_shift)
+
+        measured_address = shifted_tens_digit * 10 + shifted_ones_digit
+        expected_address = self.expected_measurement['Address']['default']
+
+        return TestResult(measured_address == expected_address,
+                          "Default Address",
+                          expected_address,
+                          measured_address,
+                          "Product needs to be set with the default address")
 
     @retry_func(5)
     def relay_feedback(self):
@@ -349,7 +401,7 @@ class CLC_Profile(Profile):
                 break
         return result
 
-    @retry_func(3)
+    @retry_func(5)
     def switch_control_feedback(self):
         LOAD_TEST_SHELL_EVENT.wait()
         result = TestResult()
@@ -358,11 +410,12 @@ class CLC_Profile(Profile):
         sleep(0.1)
         for switch_control_label, switch_control_reading_resource in self.jig.rms6_switch_control_feedback.items():
             switch_control_reading_resource.configure()
+            reading = switch_control_reading_resource.value
             result += TestResult(
-                switch_control_reading_resource.value == False,
+                not reading,
                 switch_control_label,
-                "Switch Off",
-                "Switch On" if switch_control_reading_resource.value else "Switch Off",
+                "CLEAR",
+                "SET" if reading else "CLEAR",
                 ""
             )
             if result.is_fail():
@@ -372,16 +425,17 @@ class CLC_Profile(Profile):
         self.jig.rms6_switch_off_control.value = 1
         sleep(0.1)
         for switch_control_label, switch_control_reading_resource in self.jig.rms6_switch_control_feedback.items():
+            reading = switch_control_reading_resource.value
             result += TestResult(
-                switch_control_reading_resource.value == True,
+                reading,
                 switch_control_label,
-                "Switch On",
-                "Switch On" if switch_control_reading_resource.value else "Switch Off",
+                "SET",
+                "SET" if reading else "CLEAR",
                 ""
             )
             if result.is_fail():
                 return result
-        return  result
+        return result
 
     def can_termination_test(self):
         result = TestResult()
@@ -395,59 +449,84 @@ class CLC_Profile(Profile):
         result += TestResult(True, "After adding resistance", "", post_additional_resistance_measurement, "")
         return result
 
-    def can(self):
+    def can_communication(self):
+        @dataclass
+        class CANTestEntity:
+            can_peripheral: CANResource | CAN
+            name: str
         LOAD_TEST_SHELL_EVENT.wait()
+        can_pairs = [(CANTestEntity(can_peripheral=self.jig.dut_can_resource, name="DUT_CAN"),
+                      CANTestEntity(can_peripheral=self.jig.daq2_can, name="DAQ2_CAN")),
+                     (CANTestEntity(can_peripheral=self.jig.daq2_can, name="DAQ2_CAN"),
+                      CANTestEntity(can_peripheral=self.jig.dut_can_resource, name="DUT_CAN"))]
         result = TestResult()
         for frame in (CANFrame(self.jig.can_id, b'\x55\xFF\xAB\x5C\xC5\xD3\xFF\x55'),
                       CANFrame(self.jig.can_id, b'\x34\x23\xDF\x3E\xE3\xC2\x2C\x22')):
-            self.jig.rms6_can_bus_resource.flush()
-            self.jig.rms6_can_bus_resource.write(frame)
-            sleep(0.1)
-            resp = self.jig.daq2_can.read()
-            res = resp is not None and resp.can_id == frame.can_id and resp.data == frame.data
-            result += TestResult(res, f"DUT->DAQ", frame, resp,
-                                 "Correct response" if res else "Incorrect response")
-            if result.is_fail():
-                return result
+            for can_pair in can_pairs:
+                source = can_pair[0]
+                destination = can_pair[1]
+                source.can_peripheral.flush()
+                destination.can_peripheral.flush()
+                source.can_peripheral.write(frame)
+                sleep(0.1)
+                resp = destination.can_peripheral.read()
+                res = resp is not None and resp.can_id == frame.can_id and resp.data == frame.data
+                result += TestResult(res, f"{source.name}->{destination.name}", frame, resp,
+                                     "Correct response" if res else "Incorrect response")
+                if result.is_fail():
+                    return result
 
-            # self.jig.rms6_can_bus_resource.flush()
-            # self.jig.daq2_can.write(frame)
-            # sleep(0.1)
-            # resp = self.jig.rms6_can_bus_resource.read()
-            # res = resp is not None and resp.can_id == frame.can_id and resp.data == frame.data
-            # result += TestResult(res, f"DAQ->DUT", frame, resp,
-            #                      "Correct response" if res else "Incorrect response")
-            # if result.is_fail():
-            #     return result
         return result
 
-    def _test_relay_led(self, led_label: str, relay_switch_leds: dict):
+    def _test_relay_led(self, led_control_and_sensors: dict):
         result = TestResult()
+        # Off
+        ambient_red_readings = {}
+        ambient_green_readings = {}
+        for led_label in led_control_and_sensors.keys():
+            ambient_red_readings[led_label] = led_control_and_sensors[led_label][1].value[1]
+            ambient_green_readings[led_label] = led_control_and_sensors[led_label][1].value[2]
+            result += TestResult(True, f"{led_label} OFF", "", led_control_and_sensors[led_label][1].value,
+                                 "Switch LED Ambient readings")
         # Red
-        relay_switch_leds[led_label][0].configure()
-        relay_switch_leds[led_label][0].value = True
-        self.jig.led_red.value = True
+        for led_label in led_control_and_sensors.keys():
+            led_control_and_sensors[led_label][0].configure()
+            led_control_and_sensors[led_label][0].value = 1
+        self.jig.led_red.value = 1
         sleep(0.3)
-        result += TestResult(True, f"{led_label} RED", "",  relay_switch_leds[led_label][1].value, "")
-        self.jig.led_red.value = False
-        relay_switch_leds[led_label][0].value = False
+
+        for led_label in led_control_and_sensors.keys():
+            result += in_range_list(led_control_and_sensors[led_label][1].value[1] - ambient_red_readings[led_label],
+                                    [1000, 65535], f"{led_label} RED")
+        sleep(0.1)
+        self.jig.led_red.value = 0
 
         # Green
-        self.jig.led_green.value = True
-        relay_switch_leds[led_label][0].value = True
+        self.jig.led_green.value = 1
         sleep(0.3)
-        result += TestResult(True, f"{led_label} GREEN", "",  relay_switch_leds[led_label][1].value, "")
+        for led_label in led_control_and_sensors.keys():
+            result += in_range_list(led_control_and_sensors[led_label][1].value[2] - ambient_green_readings[led_label],
+                                    [1000, 65535], f"{led_label} GREEN")
+
+        for led_label in led_control_and_sensors.keys():
+            led_control_and_sensors[led_label][0].configure()
+            led_control_and_sensors[led_label][0].value = 0
+
         return result
 
     def _test_system_led(self, sys_led_sensor):
         result = TestResult()
-        self.jig.led_sys_red.value = True
+        # Off
+        ambient_red_reading = sys_led_sensor.value[1]
+        ambient_green_reading = sys_led_sensor.value[2]
+        result = TestResult(True, "SYS OFF", "", sys_led_sensor.value, "SYS LED Ambient readings")
+        self.jig.led_sys_red.value = 1
         sleep(0.3)
-        result += TestResult(True, "SYS RED", "", sys_led_sensor.value, "")
-        self.jig.led_sys_red.value = False
-        self.jig.led_sys_green.value = True
+        result += in_range_list(sys_led_sensor.value[1] - ambient_red_reading, [1000, 65535], "SYS LED RED")
+        self.jig.led_sys_red.value = 0
+        self.jig.led_sys_green.value = 1
         sleep(0.3)
-        result += TestResult(True, "SYS GREEN", "", sys_led_sensor.value, "")
+        result += in_range_list(sys_led_sensor.value[2] - ambient_green_reading, [1000, 65535], "SYS LED GREEN")
         return result
 
     def can_led(self, *args, **kwargs):
@@ -456,15 +535,28 @@ class CLC_Profile(Profile):
         except KeyError:
             return TestResult(False, "CAN LED", "", "", "No CAN LED sensor to measure")
         result = TestResult()
+        # Off
+        ambient_red_reding = can_led_sensor.value[1]
+        ambient_green_reading = can_led_sensor.value[2]
+        result += TestResult(True, "CAN OFF", "", can_led_sensor.value, "CAN LED Ambient readings")
         # Red
-        self.jig.led_can_err.value = True
+        self.jig.led_can_err.value = 1
         sleep(0.5)
-        result += TestResult(True, "CAN RED", "", can_led_sensor.value, "")
-        self.jig.led_can_err.value = False
+        # result += TestResult(True, "CAN RED", "", can_led_sensor.value[1], "")
+        result += in_range_list(can_led_sensor.value[1] - ambient_red_reding, [1000, 65535], "CAN LED RED")
+        self.jig.led_can_err.value = 0
         # Green
-        with self.jig.rms6_can_bus_resource.test(CANFrame(int(0), b'\x00\x00\x00\x00'), timeout=1.0):
-            sleep(0.5)
-            result += TestResult(True, "CAN GREEN", "", can_led_sensor.value, "")
+        self.jig.can_l.mode = 'op'
+        self.jig.can_l.value = 1.5
+
+        self.jig.can_h.mode = 'op'
+        self.jig.can_h.value = 3.5
+
+        sleep(0.5)
+        # result += TestResult(True, "CAN GREEN", "", can_led_sensor.value[2], "")
+        result += in_range_list(can_led_sensor.value[2] - ambient_green_reading, [1000, 65535], "CAN LED GREEN")
+        self.jig.can_l.mode = 'ip'
+        self.jig.can_h.mode = 'ip'
         return result
 
     def led_test(self, *args, **kwargs):
@@ -473,19 +565,22 @@ class CLC_Profile(Profile):
         if not kwargs["sys_led_sensor"]:
             return TestResult(False, "LED Test", "", "", "Missing System LED Sensor")
 
+        self.jig.led_red.value = 0
+        self.jig.led_green.value = 0
+        self.jig.led_sys_red.value = 0
+        self.jig.led_sys_green.value = 0
+        self.jig.led_can_err.value = 0
+
         relay_switch_leds = kwargs["relay_switch_leds"]
         sys_led_sensor = kwargs["sys_led_sensor"]
         result = TestResult()
-        for led_label in relay_switch_leds.keys():
-            result += self._test_relay_led(led_label, relay_switch_leds)
-            if result.is_fail():
-                return result
+
+        result += self._test_relay_led(relay_switch_leds)
         result += self._test_system_led(sys_led_sensor)
-        if result.is_fail():
-            return result
         return result
 
     def spi_test(self, **kwargs):
+        result = TestResult()
         try:
             sn = kwargs["sn"]
         except KeyError:
@@ -498,17 +593,38 @@ class CLC_Profile(Profile):
         # Send sn through SPI
         self.jig.gsm8_spi.transfer(sn_write_instruction)
         # Read back sn
-        resp = self.jig.gsm8_spi.transfer(b'\x03\x00\x00\x00\x00\x00\x00')
+        resp = self.jig.gsm8_spi.transfer(b'\x03\x00\x00' + b'\x00' * len(sn_in_bytes))
         sn_read_back = int.from_bytes(resp[3:], byteorder='big')
 
-        return TestResult(
+        result += TestResult(
             sn == sn_read_back,
-            "SPI Test",
+            "SN Write",
             f"SN sent: {sn}",
             f"SN read back: {sn_read_back}",
             "Correct response" if sn == sn_read_back else "Incorrect response"
         )
 
+        if result.is_fail():
+            return result
+
+        print("Delete Serial Number from EEPROM")
+        empty_bytes = b"\xff" * len(sn_in_bytes)
+        sn_write_instruction = b'\x02\x00\x00' + empty_bytes
+        self.jig.gsm8_spi.transfer(b'\x06')
+        self.jig.gsm8_spi.transfer(sn_write_instruction)
+
+        resp = self.jig.gsm8_spi.transfer(b'\x03\x00\x00' + b'\x00' * len(sn_in_bytes))
+        resp = resp[3:]
+
+        result += TestResult(
+            resp == empty_bytes,
+            "SN Delete",
+            f"Empty Data Bytes: {empty_bytes}",
+            f"Data read back: {resp}",
+            "Correct response" if resp == empty_bytes else "Incorrect response"
+        )
+
+        return result
 
     def gsm8_jumper_reading(self):
         result = TestResult()
@@ -517,11 +633,21 @@ class CLC_Profile(Profile):
             result += in_range_list(test_point.value, expected_ranges, jumper_label)
         return result
 
-
-    def gsm8_sw_pilot(self):
+    def gsm8_sw_pilot_light_control(self):
         result = TestResult()
         for sw_pilot_label, test_point in self.jig.gsm8_pilot_voltage_measurement.items():
-            result += in_range_list(test_point.value, [15, 25], sw_pilot_label)
+            result += in_range_list(test_point.value, [0, 1.0], f"{sw_pilot_label} OFF")
+        for sw_label, fw_control in self.jig.gsm8_pilot_light_fw_control.items():
+            fw_control.configure()
+            fw_control.value = 1
+        sleep(0.5)
+        for sw_pilot_label, test_point in self.jig.gsm8_pilot_voltage_measurement.items():
+            result += in_range_list(test_point.value, [15, 25], f"{sw_pilot_label} ON")
+        for sw_label, fw_control in self.jig.gsm8_pilot_light_fw_control.items():
+            fw_control.value = 0
+        sleep(0.5)
+        for sw_pilot_label, test_point in self.jig.gsm8_pilot_voltage_measurement.items():
+            result += in_range_list(test_point.value, [0, 1.0], f"{sw_pilot_label} OFF")
         return result
 
     @retry_func(3)
@@ -531,7 +657,8 @@ class CLC_Profile(Profile):
             sw_on_feedback.configure()
             result += in_range_list(sw_on_feedback.value, [3.0, 3.4], sw_label)
         for sw_label, sw_off_feedback in self.jig.gsm8_switch_off_feedback.items():
-            result += TestResult(not sw_off_feedback.value, sw_label, "Negative Feedback", "Negative Feedback" if not sw_off_feedback.value else "Positive Feedback", "")
+            result += TestResult(not sw_off_feedback.value, sw_label, "CLEAR",
+                                 "CLEAR" if not sw_off_feedback.value else "SET", "")
 
         for sw_label, simulation in self.jig.gsm8_switch_off_simulation.items():
             simulation.value = 1
@@ -541,7 +668,8 @@ class CLC_Profile(Profile):
             sw_on_feedback.configure()
             result += in_range_list(sw_on_feedback.value, [0.0, 0.5], sw_label)
         for sw_label, sw_off_feedback in self.jig.gsm8_switch_off_feedback.items():
-            result += TestResult(sw_off_feedback.value, sw_label, "Positive Feedback", "Positive Feedback" if sw_off_feedback.value else "Negative Feedback", "")
+            result += TestResult(sw_off_feedback.value, sw_label, "SET",
+                                 "SET" if sw_off_feedback.value else "CLEAR", "")
 
         for sw_label, simulation in self.jig.gsm8_switch_off_simulation.items():
             simulation.value = 0
